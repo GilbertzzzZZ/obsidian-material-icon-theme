@@ -27,6 +27,33 @@ const MAX_REFRESH_WAIT = 200;
 // times so icons land regardless of how long the tree takes to appear.
 const BOOT_RETRY_DELAYS = [0, 200, 600, 1500, 3000, 6000];
 
+// ── SVG helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * Icon SVGs ship with the plugin and are never user input, but they still get
+ * parsed rather than assigned through innerHTML — raw HTML assignment is called
+ * out in Obsidian's plugin guidelines.
+ */
+function parseSvgIcon(svg: string, doc: Document): SVGElement | null {
+  const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  if (parsed.querySelector('parsererror')) return null;
+
+  const root = parsed.documentElement;
+  if (root.nodeName.toLowerCase() !== 'svg') return null;
+
+  return doc.importNode(root, true) as unknown as SVGElement;
+}
+
+/** Replace an element's contents with a sized copy of the given icon. */
+function renderIconInto(target: HTMLElement, svg: string, size: number) {
+  target.empty();
+  const node = parseSvgIcon(svg, target.ownerDocument);
+  if (!node) return;
+  node.setAttribute('width', String(size));
+  node.setAttribute('height', String(size));
+  target.appendChild(node);
+}
+
 // ── i18n ──────────────────────────────────────────────────────────────────────
 
 type Lang = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'ru' | 'pt';
@@ -268,9 +295,7 @@ class IconPickerModal extends Modal {
         if (key === this.currentKey) item.addClass('is-active');
 
         const svgWrap = item.createDiv({ cls: 'mfi-picker-svg' });
-        svgWrap.innerHTML = svg;
-        svgWrap.querySelector('svg')?.setAttribute('width', '24');
-        svgWrap.querySelector('svg')?.setAttribute('height', '24');
+        renderIconInto(svgWrap, svg, 24);
 
         item.createDiv({ text: key, cls: 'mfi-picker-name' });
 
@@ -376,9 +401,7 @@ class AddRuleModal extends Modal {
     const set = iconRegistry[this.selectedKey];
     if (!set) return;
     const svg = this.plugin.isDark ? set.dark : set.light;
-    this.previewEl.innerHTML = svg;
-    this.previewEl.querySelector('svg')?.setAttribute('width', '20');
-    this.previewEl.querySelector('svg')?.setAttribute('height', '20');
+    renderIconInto(this.previewEl, svg, 20);
     this.selectedLabelEl.textContent = this.selectedKey;
   }
 
@@ -470,10 +493,7 @@ class MfiSettingTab extends PluginSettingTab {
         const iconWrap = row.createSpan({ cls: 'mfi-rule-icon' });
         const set = iconRegistry[rule.iconKey];
         if (set) {
-          const svg = this.plugin.isDark ? set.dark : set.light;
-          iconWrap.innerHTML = svg;
-          iconWrap.querySelector('svg')?.setAttribute('width', '18');
-          iconWrap.querySelector('svg')?.setAttribute('height', '18');
+          renderIconInto(iconWrap, this.plugin.isDark ? set.dark : set.light, 18);
         }
 
         row.createSpan({ cls: 'mfi-rule-ext', text: `.${rule.extension}` });
@@ -537,7 +557,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
     await this.loadSettings();
     this.addSettingTab(new MfiSettingTab(this.app, this));
 
-    this.isDark = document.body.hasClass('theme-dark');
+    this.isDark = activeDocument.body.hasClass('theme-dark');
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.syncLeaves()));
 
@@ -559,14 +579,14 @@ export default class MaterialFileIconsPlugin extends Plugin {
     });
 
     this.themeObserver = new MutationObserver(() => {
-      const nowDark = document.body.hasClass('theme-dark');
+      const nowDark = activeDocument.body.hasClass('theme-dark');
       if (nowDark !== this.isDark) {
         this.isDark = nowDark;
         this.resetAllIcons();
         this.refreshIcons();
       }
     });
-    this.themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    this.themeObserver.observe(activeDocument.body, { attributes: true, attributeFilter: ['class'] });
     this.register(() => this.themeObserver?.disconnect());
   }
 
@@ -817,7 +837,11 @@ export default class MaterialFileIconsPlugin extends Plugin {
     const contentEl = titleEl.querySelector('.nav-file-title-content');
     if (!contentEl) return;
 
-    this.placeIcon(titleEl, contentEl, this.makeSvgSpan(this.getFileIconSvg(path), ICON_CLASS));
+    this.placeIcon(
+      titleEl,
+      contentEl,
+      this.makeSvgSpan(this.getFileIconSvg(path), ICON_CLASS, titleEl.ownerDocument)
+    );
     titleEl.setAttribute(APPLIED_ATTR, '1');
   }
 
@@ -831,7 +855,8 @@ export default class MaterialFileIconsPlugin extends Plugin {
     const key = this.getFolderIconKey(titleEl.dataset.path ?? '', collapsed);
     const icon = this.makeSvgSpan(
       this.getSvg(this.getIconSet(key)),
-      `${ICON_CLASS} ${FOLDER_ICON_CLASS}`
+      `${ICON_CLASS} ${FOLDER_ICON_CLASS}`,
+      titleEl.ownerDocument
     );
 
     this.placeIcon(titleEl, contentEl, icon);
@@ -857,24 +882,20 @@ export default class MaterialFileIconsPlugin extends Plugin {
     const span = titleEl.querySelector<HTMLElement>(`.${FOLDER_ICON_CLASS}`);
     if (!span) return;
     const key = this.getFolderIconKey(titleEl.dataset.path ?? '', collapsed);
-    span.innerHTML = this.getSvg(this.getIconSet(key));
-    const svgEl = span.querySelector('svg');
-    if (svgEl) { svgEl.setAttribute('width', '16'); svgEl.setAttribute('height', '16'); }
+    renderIconInto(span, this.getSvg(this.getIconSet(key)), 16);
   }
 
-  private makeSvgSpan(svg: string, className: string): HTMLElement {
-    const span = document.createElement('span');
+  private makeSvgSpan(svg: string, className: string, doc: Document): HTMLElement {
+    const span = doc.createElement('span');
     span.className = className;
-    span.innerHTML = svg;
-    const svgEl = span.querySelector('svg');
-    if (svgEl) { svgEl.setAttribute('width', '16'); svgEl.setAttribute('height', '16'); }
+    renderIconInto(span, svg, 16);
     return span;
   }
 
   private resetAllIcons() {
-    document.querySelectorAll(`[${APPLIED_ATTR}]`).forEach(el => el.removeAttribute(APPLIED_ATTR));
-    document.querySelectorAll(`[${OBSERVED_ATTR}]`).forEach(el => el.removeAttribute(OBSERVED_ATTR));
-    document.querySelectorAll(`.${ICON_CLASS}`).forEach(el => el.remove());
+    activeDocument.querySelectorAll(`[${APPLIED_ATTR}]`).forEach(el => el.removeAttribute(APPLIED_ATTR));
+    activeDocument.querySelectorAll(`[${OBSERVED_ATTR}]`).forEach(el => el.removeAttribute(OBSERVED_ATTR));
+    activeDocument.querySelectorAll(`.${ICON_CLASS}`).forEach(el => el.remove());
     this.folderObservers.forEach(obs => obs.disconnect());
     this.folderObservers.clear();
   }
