@@ -106,7 +106,7 @@ interface Strings {
   applyFiles: string; applyFilesDesc: string;
   applyFolders: string; applyFoldersDesc: string;
   customRules: string; customRulesDesc: string;
-  noRules: string; addRuleBtn: string; extExists: string;
+  noRules: string; addRuleBtn: string; rulesHeading: string; extExists: string;
   edit: string; delete: string;
   pickIcon: string; searchPlaceholder: string;
   addRule: string; editRule: string;
@@ -123,7 +123,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'Apply file icons', applyFilesDesc: 'Show Material icons for files by extension, use theme icons when disabled',
     applyFolders: 'Apply folder icons', applyFoldersDesc: 'Show Material icons for folders, use theme icons when disabled',
     customRules: 'Custom rules', customRulesDesc: 'When enabled, custom rules take priority over default icon matching',
-    noRules: 'No rules yet, click the button below to add', addRuleBtn: '+ Add rule', extExists: 'Rule for .{ext} already exists',
+    noRules: 'No rules yet', addRuleBtn: 'Add rule', rulesHeading: 'Rules', extExists: 'Rule for .{ext} already exists',
     edit: 'Edit', delete: 'Delete',
     pickIcon: 'Select Icon', searchPlaceholder: 'Search icon name...',
     addRule: 'Add Custom Rule', editRule: 'Edit Rule',
@@ -138,7 +138,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: '应用文件图标', applyFilesDesc: '根据扩展名为文件显示 Material 图标，关闭后使用主题自带图标',
     applyFolders: '应用文件夹图标', applyFoldersDesc: '为文件夹显示 Material 图标，关闭后使用主题自带图标',
     customRules: '自定义规则', customRulesDesc: '开启后，自定义规则优先于默认图标匹配',
-    noRules: '暂无规则，点击下方按钮添加', addRuleBtn: '+ 添加规则', extExists: '后缀 .{ext} 的规则已存在',
+    noRules: '暂无规则', addRuleBtn: '添加规则', rulesHeading: '规则', extExists: '后缀 .{ext} 的规则已存在',
     edit: '编辑', delete: '删除',
     pickIcon: '选择图标', searchPlaceholder: '搜索图标名称...',
     addRule: '添加自定义规则', editRule: '编辑规则',
@@ -153,7 +153,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: '套用檔案圖示', applyFilesDesc: '根據副檔名為檔案顯示 Material 圖示，關閉後使用佈景主題圖示',
     applyFolders: '套用資料夾圖示', applyFoldersDesc: '為資料夾顯示 Material 圖示，關閉後使用佈景主題圖示',
     customRules: '自訂規則', customRulesDesc: '啟用後，自訂規則優先於預設圖示匹配',
-    noRules: '尚無規則，點擊下方按鈕新增', addRuleBtn: '+ 新增規則', extExists: '副檔名 .{ext} 的規則已存在',
+    noRules: '尚無規則', addRuleBtn: '新增規則', rulesHeading: '規則', extExists: '副檔名 .{ext} 的規則已存在',
     edit: '編輯', delete: '刪除',
     pickIcon: '選擇圖示', searchPlaceholder: '搜尋圖示名稱...',
     addRule: '新增自訂規則', editRule: '編輯規則',
@@ -168,7 +168,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'ファイルアイコンを適用', applyFilesDesc: '拡張子に基づきファイルに Material アイコンを表示、無効時はテーマアイコンを使用',
     applyFolders: 'フォルダーアイコンを適用', applyFoldersDesc: 'フォルダーに Material アイコンを表示、無効時はテーマアイコンを使用',
     customRules: 'カスタムルール', customRulesDesc: '有効にすると、カスタムルールがデフォルトより優先されます',
-    noRules: 'ルールがありません。下のボタンで追加', addRuleBtn: '+ ルールを追加', extExists: '.{ext} のルールはすでに存在します',
+    noRules: 'ルールがありません', addRuleBtn: 'ルールを追加', rulesHeading: 'ルール', extExists: '.{ext} のルールはすでに存在します',
     edit: '編集', delete: '削除',
     pickIcon: 'アイコンを選択', searchPlaceholder: 'アイコン名を検索...',
     addRule: 'カスタムルールを追加', editRule: 'ルールを編集',
@@ -183,7 +183,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: '파일 아이콘 적용', applyFilesDesc: '확장자에 따라 파일에 Material 아이콘 표시, 비활성화 시 테마 아이콘 사용',
     applyFolders: '폴더 아이콘 적용', applyFoldersDesc: '폴더에 Material 아이콘 표시, 비활성화 시 테마 아이콘 사용',
     customRules: '사용자 정의 규칙', customRulesDesc: '활성화 시 사용자 정의 규칙이 기본 아이콘 매칭보다 우선됩니다',
-    noRules: '규칙이 없습니다. 아래 버튼을 클릭하여 추가', addRuleBtn: '+ 규칙 추가', extExists: '.{ext} 규칙이 이미 존재합니다',
+    noRules: '규칙이 없습니다', addRuleBtn: '규칙 추가', rulesHeading: '규칙', extExists: '.{ext} 규칙이 이미 존재합니다',
     edit: '편집', delete: '삭제',
     pickIcon: '아이콘 선택', searchPlaceholder: '아이콘 이름 검색...',
     addRule: '사용자 정의 규칙 추가', editRule: '규칙 편집',
@@ -198,7 +198,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'Datei-Symbole anwenden', applyFilesDesc: 'Material-Symbole für Dateien nach Endung anzeigen, bei Deaktivierung Theme-Symbole verwenden',
     applyFolders: 'Ordner-Symbole anwenden', applyFoldersDesc: 'Material-Symbole für Ordner anzeigen, bei Deaktivierung Theme-Symbole verwenden',
     customRules: 'Benutzerdefinierte Regeln', customRulesDesc: 'Bei Aktivierung haben benutzerdefinierte Regeln Vorrang vor Standard-Zuordnungen',
-    noRules: 'Keine Regeln vorhanden, unten hinzufügen', addRuleBtn: '+ Regel hinzufügen', extExists: 'Regel für .{ext} existiert bereits',
+    noRules: 'Noch keine Regeln', addRuleBtn: 'Regel hinzufügen', rulesHeading: 'Regeln', extExists: 'Regel für .{ext} existiert bereits',
     edit: 'Bearbeiten', delete: 'Löschen',
     pickIcon: 'Symbol auswählen', searchPlaceholder: 'Symbolname suchen...',
     addRule: 'Benutzerdefinierte Regel hinzufügen', editRule: 'Regel bearbeiten',
@@ -213,7 +213,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'Appliquer les icônes de fichiers', applyFilesDesc: "Afficher les icônes Material pour les fichiers selon l'extension, utiliser les icônes du thème si désactivé",
     applyFolders: 'Appliquer les icônes de dossiers', applyFoldersDesc: 'Afficher les icônes Material pour les dossiers, utiliser les icônes du thème si désactivé',
     customRules: 'Règles personnalisées', customRulesDesc: "Si activé, les règles personnalisées ont la priorité sur la correspondance d'icônes par défaut",
-    noRules: 'Aucune règle, cliquez ci-dessous pour en ajouter', addRuleBtn: '+ Ajouter une règle', extExists: 'Une règle pour .{ext} existe déjà',
+    noRules: 'Aucune règle', addRuleBtn: 'Ajouter une règle', rulesHeading: 'Règles', extExists: 'Une règle pour .{ext} existe déjà',
     edit: 'Modifier', delete: 'Supprimer',
     pickIcon: 'Sélectionner une icône', searchPlaceholder: 'Rechercher une icône...',
     addRule: 'Ajouter une règle personnalisée', editRule: 'Modifier la règle',
@@ -228,7 +228,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'Aplicar iconos de archivos', applyFilesDesc: 'Mostrar iconos Material para archivos según extensión, usar iconos del tema si está desactivado',
     applyFolders: 'Aplicar iconos de carpetas', applyFoldersDesc: 'Mostrar iconos Material para carpetas, usar iconos del tema si está desactivado',
     customRules: 'Reglas personalizadas', customRulesDesc: 'Si está activado, las reglas personalizadas tienen prioridad sobre la asignación predeterminada',
-    noRules: 'Sin reglas, haga clic abajo para añadir', addRuleBtn: '+ Añadir regla', extExists: 'Ya existe una regla para .{ext}',
+    noRules: 'Sin reglas', addRuleBtn: 'Añadir regla', rulesHeading: 'Reglas', extExists: 'Ya existe una regla para .{ext}',
     edit: 'Editar', delete: 'Eliminar',
     pickIcon: 'Seleccionar icono', searchPlaceholder: 'Buscar nombre de icono...',
     addRule: 'Añadir regla personalizada', editRule: 'Editar regla',
@@ -243,7 +243,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'Применить иконки файлов', applyFilesDesc: 'Показывать Material-иконки для файлов по расширению, при отключении использовать иконки темы',
     applyFolders: 'Применить иконки папок', applyFoldersDesc: 'Показывать Material-иконки для папок, при отключении использовать иконки темы',
     customRules: 'Пользовательские правила', customRulesDesc: 'При включении пользовательские правила имеют приоритет над стандартным сопоставлением',
-    noRules: 'Правил нет, нажмите кнопку ниже для добавления', addRuleBtn: '+ Добавить правило', extExists: 'Правило для .{ext} уже существует',
+    noRules: 'Правил нет', addRuleBtn: 'Добавить правило', rulesHeading: 'Правила', extExists: 'Правило для .{ext} уже существует',
     edit: 'Изменить', delete: 'Удалить',
     pickIcon: 'Выбрать иконку', searchPlaceholder: 'Поиск иконки...',
     addRule: 'Добавить правило', editRule: 'Редактировать правило',
@@ -258,7 +258,7 @@ const STRINGS: Record<Lang, Strings> = {
     applyFiles: 'Aplicar ícones de arquivos', applyFilesDesc: 'Mostrar ícones Material para arquivos por extensão, usar ícones do tema se desativado',
     applyFolders: 'Aplicar ícones de pastas', applyFoldersDesc: 'Mostrar ícones Material para pastas, usar ícones do tema se desativado',
     customRules: 'Regras personalizadas', customRulesDesc: 'Se ativado, regras personalizadas têm prioridade sobre a correspondência padrão',
-    noRules: 'Sem regras, clique abaixo para adicionar', addRuleBtn: '+ Adicionar regra', extExists: 'Regra para .{ext} já existe',
+    noRules: 'Sem regras', addRuleBtn: 'Adicionar regra', rulesHeading: 'Regras', extExists: 'Regra para .{ext} já existe',
     edit: 'Editar', delete: 'Excluir',
     pickIcon: 'Selecionar ícone', searchPlaceholder: 'Pesquisar nome do ícone...',
     addRule: 'Adicionar regra personalizada', editRule: 'Editar regra',
@@ -500,7 +500,7 @@ class MfiSettingTab extends PluginSettingTab {
       },
       {
         type: 'list',
-        cls: 'mfi-rules-list',
+        heading: t.rulesHeading,
         visible: () => this.plugin.settings.enableCustomRules,
         emptyState: t.noRules,
         onDelete: index => this.deleteRule(index),
