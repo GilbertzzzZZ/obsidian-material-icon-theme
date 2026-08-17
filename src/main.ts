@@ -6,6 +6,7 @@ import {
   PluginSettingTab,
   Setting,
   WorkspaceLeaf,
+  getLanguage,
   type SettingDefinitionItem,
 } from 'obsidian';
 import {
@@ -67,6 +68,33 @@ function renderIconInto(target: HTMLElement, svg: string, size: number) {
 
 type Lang = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'ru' | 'pt';
 
+/** What the user picked. `auto` defers to Obsidian's own interface language. */
+type LanguageSetting = Lang | 'auto';
+
+/**
+ * getLanguage() returns Obsidian's configured interface language as an ISO code
+ * — `zh`, `zh-TW`, `pt-BR` and so on. Map those onto the languages this plugin
+ * ships; anything unrecognised falls back to English rather than to whichever
+ * locale the author happened to develop in.
+ */
+function detectObsidianLanguage(): Lang {
+  const raw = getLanguage().toLowerCase();
+  if (!raw) return 'en';
+
+  const aliases: Record<string, Lang> = {
+    'zh': 'zh-CN',
+    'zh-cn': 'zh-CN',
+    'zh-tw': 'zh-TW',
+    'zh-hant': 'zh-TW',
+    'pt-br': 'pt',
+  };
+  if (raw in aliases) return aliases[raw];
+
+  const base = raw.split('-')[0];
+  const supported: Lang[] = ['en', 'ja', 'ko', 'de', 'fr', 'es', 'ru', 'pt'];
+  return supported.find(code => code === base) ?? 'en';
+}
+
 const LANG_NAMES: Record<Lang, string> = {
   'en': 'English', 'zh-CN': '简体中文', 'zh-TW': '繁體中文',
   'ja': '日本語', 'ko': '한국어', 'de': 'Deutsch',
@@ -74,7 +102,7 @@ const LANG_NAMES: Record<Lang, string> = {
 };
 
 interface Strings {
-  language: string; languageDesc: string;
+  language: string; languageDesc: string; languageAuto: string;
   applyFiles: string; applyFilesDesc: string;
   applyFolders: string; applyFoldersDesc: string;
   customRules: string; customRulesDesc: string;
@@ -91,7 +119,7 @@ interface Strings {
 
 const STRINGS: Record<Lang, Strings> = {
   'en': {
-    language: 'Language', languageDesc: 'Interface language',
+    language: 'Language', languageDesc: 'Interface language', languageAuto: 'Follow Obsidian',
     applyFiles: 'Apply file icons', applyFilesDesc: 'Show Material icons for files by extension, use theme icons when disabled',
     applyFolders: 'Apply folder icons', applyFoldersDesc: 'Show Material icons for folders, use theme icons when disabled',
     customRules: 'Custom rules', customRulesDesc: 'When enabled, custom rules take priority over default icon matching',
@@ -106,7 +134,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: 'Please enter file extension', selectIconNotice: 'Please select an icon',
   },
   'zh-CN': {
-    language: '语言', languageDesc: '界面语言',
+    language: '语言', languageDesc: '界面语言', languageAuto: '跟随 Obsidian',
     applyFiles: '应用文件图标', applyFilesDesc: '根据扩展名为文件显示 Material 图标，关闭后使用主题自带图标',
     applyFolders: '应用文件夹图标', applyFoldersDesc: '为文件夹显示 Material 图标，关闭后使用主题自带图标',
     customRules: '自定义规则', customRulesDesc: '开启后，自定义规则优先于默认图标匹配',
@@ -121,7 +149,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: '请输入文件后缀', selectIconNotice: '请选择图标',
   },
   'zh-TW': {
-    language: '語言', languageDesc: '介面語言',
+    language: '語言', languageDesc: '介面語言', languageAuto: '跟隨 Obsidian',
     applyFiles: '套用檔案圖示', applyFilesDesc: '根據副檔名為檔案顯示 Material 圖示，關閉後使用佈景主題圖示',
     applyFolders: '套用資料夾圖示', applyFoldersDesc: '為資料夾顯示 Material 圖示，關閉後使用佈景主題圖示',
     customRules: '自訂規則', customRulesDesc: '啟用後，自訂規則優先於預設圖示匹配',
@@ -136,7 +164,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: '請輸入副檔名', selectIconNotice: '請選擇圖示',
   },
   'ja': {
-    language: '言語', languageDesc: 'インターフェース言語',
+    language: '言語', languageDesc: 'インターフェース言語', languageAuto: 'Obsidian に従う',
     applyFiles: 'ファイルアイコンを適用', applyFilesDesc: '拡張子に基づきファイルに Material アイコンを表示、無効時はテーマアイコンを使用',
     applyFolders: 'フォルダーアイコンを適用', applyFoldersDesc: 'フォルダーに Material アイコンを表示、無効時はテーマアイコンを使用',
     customRules: 'カスタムルール', customRulesDesc: '有効にすると、カスタムルールがデフォルトより優先されます',
@@ -151,7 +179,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: 'ファイル拡張子を入力してください', selectIconNotice: 'アイコンを選択してください',
   },
   'ko': {
-    language: '언어', languageDesc: '인터페이스 언어',
+    language: '언어', languageDesc: '인터페이스 언어', languageAuto: 'Obsidian 따르기',
     applyFiles: '파일 아이콘 적용', applyFilesDesc: '확장자에 따라 파일에 Material 아이콘 표시, 비활성화 시 테마 아이콘 사용',
     applyFolders: '폴더 아이콘 적용', applyFoldersDesc: '폴더에 Material 아이콘 표시, 비활성화 시 테마 아이콘 사용',
     customRules: '사용자 정의 규칙', customRulesDesc: '활성화 시 사용자 정의 규칙이 기본 아이콘 매칭보다 우선됩니다',
@@ -166,7 +194,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: '파일 확장자를 입력하세요', selectIconNotice: '아이콘을 선택하세요',
   },
   'de': {
-    language: 'Sprache', languageDesc: 'Benutzeroberflächen-Sprache',
+    language: 'Sprache', languageDesc: 'Benutzeroberflächen-Sprache', languageAuto: 'Obsidian folgen',
     applyFiles: 'Datei-Symbole anwenden', applyFilesDesc: 'Material-Symbole für Dateien nach Endung anzeigen, bei Deaktivierung Theme-Symbole verwenden',
     applyFolders: 'Ordner-Symbole anwenden', applyFoldersDesc: 'Material-Symbole für Ordner anzeigen, bei Deaktivierung Theme-Symbole verwenden',
     customRules: 'Benutzerdefinierte Regeln', customRulesDesc: 'Bei Aktivierung haben benutzerdefinierte Regeln Vorrang vor Standard-Zuordnungen',
@@ -181,7 +209,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: 'Bitte Dateiendung eingeben', selectIconNotice: 'Bitte ein Symbol auswählen',
   },
   'fr': {
-    language: 'Langue', languageDesc: "Langue de l'interface",
+    language: 'Langue', languageDesc: "Langue de l'interface", languageAuto: 'Suivre Obsidian',
     applyFiles: 'Appliquer les icônes de fichiers', applyFilesDesc: "Afficher les icônes Material pour les fichiers selon l'extension, utiliser les icônes du thème si désactivé",
     applyFolders: 'Appliquer les icônes de dossiers', applyFoldersDesc: 'Afficher les icônes Material pour les dossiers, utiliser les icônes du thème si désactivé',
     customRules: 'Règles personnalisées', customRulesDesc: "Si activé, les règles personnalisées ont la priorité sur la correspondance d'icônes par défaut",
@@ -196,7 +224,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: "Veuillez saisir l'extension de fichier", selectIconNotice: 'Veuillez sélectionner une icône',
   },
   'es': {
-    language: 'Idioma', languageDesc: 'Idioma de la interfaz',
+    language: 'Idioma', languageDesc: 'Idioma de la interfaz', languageAuto: 'Seguir a Obsidian',
     applyFiles: 'Aplicar iconos de archivos', applyFilesDesc: 'Mostrar iconos Material para archivos según extensión, usar iconos del tema si está desactivado',
     applyFolders: 'Aplicar iconos de carpetas', applyFoldersDesc: 'Mostrar iconos Material para carpetas, usar iconos del tema si está desactivado',
     customRules: 'Reglas personalizadas', customRulesDesc: 'Si está activado, las reglas personalizadas tienen prioridad sobre la asignación predeterminada',
@@ -211,7 +239,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: 'Por favor ingrese la extensión de archivo', selectIconNotice: 'Por favor seleccione un icono',
   },
   'ru': {
-    language: 'Язык', languageDesc: 'Язык интерфейса',
+    language: 'Язык', languageDesc: 'Язык интерфейса', languageAuto: 'Как в Obsidian',
     applyFiles: 'Применить иконки файлов', applyFilesDesc: 'Показывать Material-иконки для файлов по расширению, при отключении использовать иконки темы',
     applyFolders: 'Применить иконки папок', applyFoldersDesc: 'Показывать Material-иконки для папок, при отключении использовать иконки темы',
     customRules: 'Пользовательские правила', customRulesDesc: 'При включении пользовательские правила имеют приоритет над стандартным сопоставлением',
@@ -226,7 +254,7 @@ const STRINGS: Record<Lang, Strings> = {
     enterExt: 'Пожалуйста, введите расширение файла', selectIconNotice: 'Пожалуйста, выберите иконку',
   },
   'pt': {
-    language: 'Idioma', languageDesc: 'Idioma da interface',
+    language: 'Idioma', languageDesc: 'Idioma da interface', languageAuto: 'Seguir o Obsidian',
     applyFiles: 'Aplicar ícones de arquivos', applyFilesDesc: 'Mostrar ícones Material para arquivos por extensão, usar ícones do tema se desativado',
     applyFolders: 'Aplicar ícones de pastas', applyFoldersDesc: 'Mostrar ícones Material para pastas, usar ícones do tema se desativado',
     customRules: 'Regras personalizadas', customRulesDesc: 'Se ativado, regras personalizadas têm prioridade sobre a correspondência padrão',
@@ -254,7 +282,7 @@ interface MfiSettings {
   applyToFolders: boolean;
   enableCustomRules: boolean;
   customRules: CustomRule[];
-  language: Lang;
+  language: LanguageSetting;
 }
 
 const DEFAULT_SETTINGS: MfiSettings = {
@@ -262,7 +290,7 @@ const DEFAULT_SETTINGS: MfiSettings = {
   applyToFolders: true,
   enableCustomRules: false,
   customRules: [],
-  language: 'zh-CN',
+  language: 'auto',
 };
 
 /**
@@ -449,7 +477,11 @@ class MfiSettingTab extends PluginSettingTab {
       {
         name: t.language,
         desc: t.languageDesc,
-        control: { type: 'dropdown', key: 'language', options: LANG_NAMES },
+        control: {
+          type: 'dropdown',
+          key: 'language',
+          options: { auto: t.languageAuto, ...LANG_NAMES },
+        },
       },
       {
         name: t.applyFiles,
@@ -500,7 +532,7 @@ class MfiSettingTab extends PluginSettingTab {
     // Every label comes from the language table, so the definitions have to be
     // rebuilt rather than merely re-evaluated.
     if (key === 'language') {
-      this.rerender();
+      this.reopenTab();
       return;
     }
 
@@ -555,6 +587,23 @@ class MfiSettingTab extends PluginSettingTab {
     this.update();
   }
 
+  /**
+   * update() alone is not enough after a language change: the framework re-syncs
+   * the control the user just interacted with once this callback returns, which
+   * leaves that single row rendered in the previous language. Reopening the tab
+   * forces a full render instead.
+   */
+  private reopenTab() {
+    this.update();
+
+    interface SettingModal {
+      activeTab?: unknown;
+      openTabById?: (id: string) => void;
+    }
+    const modal = (this.app as unknown as { setting?: SettingModal }).setting;
+    if (modal?.activeTab === this) modal.openTabById?.(this.plugin.manifest.id);
+  }
+
 }
 
 // ── Main plugin ───────────────────────────────────────────────────────────────
@@ -562,7 +611,17 @@ class MfiSettingTab extends PluginSettingTab {
 export default class MaterialFileIconsPlugin extends Plugin {
   settings: MfiSettings = { ...DEFAULT_SETTINGS };
 
-  get t(): Strings { return STRINGS[this.settings.language] ?? STRINGS['zh-CN']; }
+  get t(): Strings { return STRINGS[this.activeLanguage]; }
+
+  /**
+   * The language actually in use. `auto` — and any value left over from an older
+   * build that no longer exists — resolves against Obsidian's own setting.
+   */
+  get activeLanguage(): Lang {
+    const picked = this.settings.language;
+    if (picked !== 'auto' && picked in STRINGS) return picked;
+    return detectObsidianLanguage();
+  }
 
   private containers = new Map<HTMLElement, MutationObserver>();
   private folderObservers = new Map<HTMLElement, MutationObserver>();
