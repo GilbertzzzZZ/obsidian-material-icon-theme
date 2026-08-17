@@ -1,0 +1,54 @@
+# Build plugin, attach zip + Obsidian-required files to GitHub Release.
+name: Release
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (must match manifest version, e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Package plugin zip
+        run: chmod +x scripts/package-release.sh && ZIP=$(./scripts/package-release.sh) && echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Reset release before upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+        run: |
+          # Recreate the release so old attachments are not kept.
+          # Tag is preserved; GitHub re-adds source archives on the new release.
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: |
+            ${{ env.ZIP }}
+            main.js
+            manifest.json
+            styles.css
