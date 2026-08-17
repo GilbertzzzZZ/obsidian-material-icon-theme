@@ -1,7 +1,7 @@
 {
   "id": "material-icon-theme",
   "name": "Material Icon Theme",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.13.0",
   "description": "Material Design icons for the file explorer, matched by file name, extension and folder name.",
   "author": "GilbertzzzZZ",
