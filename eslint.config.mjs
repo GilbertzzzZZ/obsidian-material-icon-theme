@@ -13,6 +13,10 @@ export default tseslint.config(
   {
     ignores: [
       'main.js',
+      // The plugin folder doubles as a test vault, so other plugins' bundles
+      // live under .obsidian/ — they are not ours to lint.
+      '.obsidian/**',
+      '.claudian/**',
       'dist/**',
       'node_modules/**',
       'src/icon-data.ts',
