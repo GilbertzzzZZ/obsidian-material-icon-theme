@@ -1,4 +1,13 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
+import {
+  App,
+  Modal,
+  Notice,
+  Plugin,
+  PluginSettingTab,
+  Setting,
+  WorkspaceLeaf,
+  type SettingDefinitionItem,
+} from 'obsidian';
 import {
   iconRegistry,
   fileExtensionKeys,
@@ -256,6 +265,17 @@ const DEFAULT_SETTINGS: MfiSettings = {
   language: 'zh-CN',
 };
 
+/**
+ * Rule edits are triggered from synchronous UI callbacks that expect no return
+ * value, so the work runs detached. Catch here rather than handing a floating
+ * promise to a `void` parameter, where a failed save would vanish silently.
+ */
+function applySettingsChange(action: string, work: () => Promise<void>) {
+  work().catch((err: unknown) => {
+    console.error(`[material-icon] failed to ${action}`, err);
+  });
+}
+
 // ── Icon picker modal ─────────────────────────────────────────────────────────
 
 class IconPickerModal extends Modal {
@@ -309,7 +329,7 @@ class IconPickerModal extends Modal {
 
     render('');
     searchInput.addEventListener('input', () => render(searchInput.value.toLowerCase().trim()));
-    setTimeout(() => searchInput.focus(), 50);
+    window.setTimeout(() => searchInput.focus(), 50);
   }
 
   onClose() {
@@ -354,7 +374,7 @@ class AddRuleModal extends Modal {
       .setDesc(t.extDesc)
       .addText(text => {
         text
-          .setPlaceholder('vue')
+          .setPlaceholder('Vue')
           .setValue(this.extension)
           .onChange(v => {
             this.extension = v.trim().replace(/^\.+/, '').toLowerCase();
@@ -420,122 +440,121 @@ class MfiSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
-    const { containerEl } = this;
+  // ── Declarative settings (Obsidian 1.13.0+) ─────────────────────────────────
+
+  getSettingDefinitions(): SettingDefinitionItem[] {
     const t = this.plugin.t;
-    containerEl.empty();
 
-    // ── Language ──────────────────────────────────────────────────────────────
-    new Setting(containerEl)
-      .setName(t.language)
-      .setDesc(t.languageDesc)
-      .addDropdown(drop => {
-        for (const [code, name] of Object.entries(LANG_NAMES)) {
-          drop.addOption(code, name);
-        }
-        drop.setValue(this.plugin.settings.language).onChange(async v => {
-          this.plugin.settings.language = v as Lang;
-          await this.plugin.saveSettings();
-          this.display();
-        });
-      });
+    return [
+      {
+        name: t.language,
+        desc: t.languageDesc,
+        control: { type: 'dropdown', key: 'language', options: LANG_NAMES },
+      },
+      {
+        name: t.applyFiles,
+        desc: t.applyFilesDesc,
+        control: { type: 'toggle', key: 'applyToFiles' },
+      },
+      {
+        name: t.applyFolders,
+        desc: t.applyFoldersDesc,
+        control: { type: 'toggle', key: 'applyToFolders' },
+      },
+      {
+        name: t.customRules,
+        desc: t.customRulesDesc,
+        control: { type: 'toggle', key: 'enableCustomRules' },
+      },
+      {
+        type: 'list',
+        cls: 'mfi-rules-list',
+        visible: () => this.plugin.settings.enableCustomRules,
+        emptyState: t.noRules,
+        onDelete: index => this.deleteRule(index),
+        addItem: { name: t.addRuleBtn, action: () => this.openRuleModal() },
+        items: this.plugin.settings.customRules.map((rule, idx) => ({
+          name: `.${rule.extension}`,
+          desc: rule.iconKey,
+          render: (setting: Setting) => {
+            const preview = setting.controlEl.createSpan({ cls: 'mfi-rule-icon' });
+            const set = iconRegistry[rule.iconKey];
+            if (set) renderIconInto(preview, this.plugin.isDark ? set.dark : set.light, 18);
 
-    containerEl.createEl('hr');
+            setting.addButton(btn =>
+              btn.setButtonText(t.edit).onClick(() => this.openRuleModal(idx))
+            );
+          },
+        })),
+      },
+    ];
+  }
 
-    // ── Basic toggles ─────────────────────────────────────────────────────────
-    new Setting(containerEl)
-      .setName(t.applyFiles)
-      .setDesc(t.applyFilesDesc)
-      .addToggle(tog =>
-        tog.setValue(this.plugin.settings.applyToFiles).onChange(async v => {
-          this.plugin.settings.applyToFiles = v;
-          await this.plugin.saveSettings();
-          this.plugin.resetAndRefresh();
-        })
-      );
+  /**
+   * The framework persists the value before calling back, so this only has to
+   * propagate the side effects each key implies.
+   */
+  async setControlValue(key: string, value: unknown): Promise<void> {
+    await super.setControlValue(key, value);
 
-    new Setting(containerEl)
-      .setName(t.applyFolders)
-      .setDesc(t.applyFoldersDesc)
-      .addToggle(tog =>
-        tog.setValue(this.plugin.settings.applyToFolders).onChange(async v => {
-          this.plugin.settings.applyToFolders = v;
-          await this.plugin.saveSettings();
-          this.plugin.resetAndRefresh();
-        })
-      );
-
-    containerEl.createEl('hr');
-
-    // ── Custom rules ──────────────────────────────────────────────────────────
-    new Setting(containerEl)
-      .setName(t.customRules)
-      .setDesc(t.customRulesDesc)
-      .addToggle(tog =>
-        tog.setValue(this.plugin.settings.enableCustomRules).onChange(async v => {
-          this.plugin.settings.enableCustomRules = v;
-          await this.plugin.saveSettings();
-          this.display();
-          this.plugin.resetAndRefresh();
-        })
-      );
-
-    if (!this.plugin.settings.enableCustomRules) return;
-
-    const { customRules } = this.plugin.settings;
-
-    if (customRules.length > 0) {
-      const listEl = containerEl.createDiv({ cls: 'mfi-rules-list' });
-
-      customRules.forEach((rule, idx) => {
-        const row = listEl.createDiv({ cls: 'mfi-rule-row' });
-
-        const iconWrap = row.createSpan({ cls: 'mfi-rule-icon' });
-        const set = iconRegistry[rule.iconKey];
-        if (set) {
-          renderIconInto(iconWrap, this.plugin.isDark ? set.dark : set.light, 18);
-        }
-
-        row.createSpan({ cls: 'mfi-rule-ext', text: `.${rule.extension}` });
-        row.createSpan({ cls: 'mfi-rule-key', text: rule.iconKey });
-
-        const edit = row.createEl('button', { cls: 'mfi-rule-edit', text: t.edit });
-        edit.addEventListener('click', () => {
-          new AddRuleModal(this.app, this.plugin, async updated => {
-            this.plugin.settings.customRules[idx] = updated;
-            await this.plugin.saveSettings();
-            this.display();
-            this.plugin.resetAndRefresh();
-          }, rule).open();
-        });
-
-        const del = row.createEl('button', { cls: 'mfi-rule-del', text: t.delete });
-        del.addEventListener('click', async () => {
-          this.plugin.settings.customRules.splice(idx, 1);
-          await this.plugin.saveSettings();
-          this.display();
-          this.plugin.resetAndRefresh();
-        });
-      });
-    } else {
-      containerEl.createEl('p', { text: t.noRules, cls: 'mfi-rules-empty' });
+    // Every label comes from the language table, so the definitions have to be
+    // rebuilt rather than merely re-evaluated.
+    if (key === 'language') {
+      this.rerender();
+      return;
     }
 
-    const addBtn = containerEl.createEl('button', { cls: 'mfi-add-btn', text: t.addRuleBtn });
-    addBtn.addEventListener('click', () => {
-      new AddRuleModal(this.app, this.plugin, async rule => {
-        const exists = customRules.some(r => r.extension === rule.extension);
-        if (exists) {
-          new Notice(t.extExists.replace('{ext}', rule.extension));
+    // Toggling custom rules shows or hides the list, which `visible` covers.
+    if (key === 'enableCustomRules') this.refreshDomState();
+
+    this.plugin.resetAndRefresh();
+  }
+
+  // ── Rule operations, shared by both rendering paths ─────────────────────────
+
+  /** Open the add/edit modal. Passing an index edits that rule instead. */
+  private openRuleModal(index?: number) {
+    const t = this.plugin.t;
+    const editing = index !== undefined ? this.plugin.settings.customRules[index] : undefined;
+
+    new AddRuleModal(
+      this.app,
+      this.plugin,
+      submitted => {
+        const rules = this.plugin.settings.customRules;
+
+        if (index === undefined && rules.some(r => r.extension === submitted.extension)) {
+          new Notice(t.extExists.replace('{ext}', submitted.extension));
           return;
         }
-        this.plugin.settings.customRules.push(rule);
-        await this.plugin.saveSettings();
-        this.display();
-        this.plugin.resetAndRefresh();
-      }).open();
+
+        applySettingsChange(index === undefined ? 'add rule' : 'update rule', async () => {
+          if (index === undefined) rules.push(submitted);
+          else rules[index] = submitted;
+
+          await this.plugin.saveSettings();
+          this.rerender();
+          this.plugin.resetAndRefresh();
+        });
+      },
+      editing
+    ).open();
+  }
+
+  private deleteRule(index: number) {
+    applySettingsChange('delete rule', async () => {
+      this.plugin.settings.customRules.splice(index, 1);
+      await this.plugin.saveSettings();
+      this.rerender();
+      this.plugin.resetAndRefresh();
     });
   }
+
+  /** Adding or removing a rule changes the shape of the definitions. */
+  private rerender() {
+    this.update();
+  }
+
 }
 
 // ── Main plugin ───────────────────────────────────────────────────────────────
@@ -574,7 +593,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
       }
     });
     this.register(() => {
-      this.bootTimers.forEach(id => clearTimeout(id));
+      this.bootTimers.forEach(id => window.clearTimeout(id));
       this.bootTimers = [];
     });
 
@@ -593,7 +612,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
   onunload() {
     this.disconnectContainers();
     this.themeObserver?.disconnect();
-    if (this.refreshTimer !== null) clearTimeout(this.refreshTimer);
+    if (this.refreshTimer !== null) window.clearTimeout(this.refreshTimer);
     this.refreshDeadline = null;
     this.resetAllIcons();
   }
@@ -606,9 +625,9 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
     this.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
       if (leaf.getViewState().type !== 'file-explorer') return;
-      const container = (leaf.view as any).containerEl?.querySelector(
+      const container = leaf.view.containerEl.querySelector<HTMLElement>(
         ':scope .nav-files-container > div'
-      ) as HTMLElement | null;
+      );
       if (container) live.add(container);
     });
 
@@ -634,7 +653,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
         if (m.type === 'attributes' && m.attributeName === 'data-path') {
           // Obsidian recycles rows by rewriting data-path. Drop the stale icon so
           // the row re-renders for its new file instead of keeping the old one.
-          if (m.target instanceof HTMLElement) this.resetRow(m.target);
+          if (m.target.instanceOf(HTMLElement)) this.resetRow(m.target);
           needsRefresh = true;
           continue;
         }
@@ -643,7 +662,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
             // A subtree can be built detached and attached in one go, so the
             // added node itself is not always the tree-item.
             if (
-              node instanceof HTMLElement &&
+              node.instanceOf(HTMLElement) &&
               (node.classList.contains('tree-item') || node.querySelector('.tree-item'))
             ) {
               needsRefresh = true;
@@ -691,7 +710,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
   // ── Refresh scheduling ──────────────────────────────────────────────────────
 
   private scheduleRefresh(delayMs = 0) {
-    if (this.refreshTimer !== null) clearTimeout(this.refreshTimer);
+    if (this.refreshTimer !== null) window.clearTimeout(this.refreshTimer);
 
     // Plain debouncing lets a steady stream of events (vault indexing, virtual
     // scrolling) postpone the refresh indefinitely. Cap how long it can slip.
@@ -757,7 +776,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
   private observeFolder(folderEl: HTMLElement) {
     const obs = new MutationObserver(mutations => {
       for (const m of mutations) {
-        if (m.attributeName !== 'class' || !(m.target instanceof HTMLElement)) continue;
+        if (m.attributeName !== 'class' || !m.target.instanceOf(HTMLElement)) continue;
         const wasCollapsed = (m.oldValue ?? '').includes('is-collapsed');
         const isCollapsed = folderEl.classList.contains('is-collapsed');
         if (wasCollapsed === isCollapsed) continue;
@@ -837,11 +856,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
     const contentEl = titleEl.querySelector('.nav-file-title-content');
     if (!contentEl) return;
 
-    this.placeIcon(
-      titleEl,
-      contentEl,
-      this.makeSvgSpan(this.getFileIconSvg(path), ICON_CLASS, titleEl.ownerDocument)
-    );
+    this.placeIcon(titleEl, contentEl, this.getFileIconSvg(path), ICON_CLASS);
     titleEl.setAttribute(APPLIED_ATTR, '1');
   }
 
@@ -853,13 +868,12 @@ export default class MaterialFileIconsPlugin extends Plugin {
     if (!contentEl) return;
 
     const key = this.getFolderIconKey(titleEl.dataset.path ?? '', collapsed);
-    const icon = this.makeSvgSpan(
+    this.placeIcon(
+      titleEl,
+      contentEl,
       this.getSvg(this.getIconSet(key)),
-      `${ICON_CLASS} ${FOLDER_ICON_CLASS}`,
-      titleEl.ownerDocument
+      `${ICON_CLASS} ${FOLDER_ICON_CLASS}`
     );
-
-    this.placeIcon(titleEl, contentEl, icon);
     titleEl.setAttribute(APPLIED_ATTR, '1');
   }
 
@@ -867,7 +881,12 @@ export default class MaterialFileIconsPlugin extends Plugin {
    * Put the icon in front of the label. insertBefore() requires a direct child,
    * so fall back to prepending when a theme wraps the label in another element.
    */
-  private placeIcon(titleEl: HTMLElement, contentEl: Element, icon: HTMLElement) {
+  private placeIcon(titleEl: HTMLElement, contentEl: Element, svg: string, className: string) {
+    // createSpan appends to titleEl, so the node is repositioned afterwards.
+    // insertBefore and prepend both move an existing child, never duplicate it.
+    const icon = titleEl.createSpan({ cls: className });
+    renderIconInto(icon, svg, 16);
+
     if (contentEl.parentElement === titleEl) titleEl.insertBefore(icon, contentEl);
     else titleEl.prepend(icon);
   }
@@ -885,12 +904,6 @@ export default class MaterialFileIconsPlugin extends Plugin {
     renderIconInto(span, this.getSvg(this.getIconSet(key)), 16);
   }
 
-  private makeSvgSpan(svg: string, className: string, doc: Document): HTMLElement {
-    const span = doc.createElement('span');
-    span.className = className;
-    renderIconInto(span, svg, 16);
-    return span;
-  }
 
   private resetAllIcons() {
     activeDocument.querySelectorAll(`[${APPLIED_ATTR}]`).forEach(el => el.removeAttribute(APPLIED_ATTR));
@@ -906,7 +919,10 @@ export default class MaterialFileIconsPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    // loadData() is typed as Promise<any>; narrow it before merging so the
+    // settings object keeps a real type.
+    const saved = (await this.loadData()) as Partial<MfiSettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved ?? {});
   }
 
   async saveSettings() {

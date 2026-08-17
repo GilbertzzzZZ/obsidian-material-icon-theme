@@ -23,15 +23,18 @@
   "scripts": {
     "build-icons": "node scripts/build-icons.mjs",
     "dev": "node esbuild.config.mjs",
-    "build": "node scripts/build-icons.mjs && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production"
+    "build": "node scripts/build-icons.mjs && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "builtin-modules": "^4.0.0",
     "esbuild": "^0.25.0",
+    "eslint": "^10.8.1",
+    "eslint-plugin-obsidianmd": "^0.4.1",
     "material-icon-theme": "^5.37.0",
     "obsidian": "latest",
     "tslib": "^2.6.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.67.0"
   }
 }

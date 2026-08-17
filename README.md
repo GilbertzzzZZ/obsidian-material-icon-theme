@@ -54,8 +54,10 @@
 
 ## Getting Started
 
+> Requires Obsidian 1.13.0 or newer.
+
 1. **Install the plugin**<br>
-  Download from [Releases](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/releases) — either `material-icon-theme-x.x.x.zip` extracted into `.obsidian/plugins/`, or `main.js` + `manifest.json` + `styles.css` placed in `.obsidian/plugins/material-icon-theme/`.
+  Download `main.js`, `manifest.json` and `styles.css` from [Releases](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/releases) into `.obsidian/plugins/material-icon-theme/`.
 
 2. **Enable the plugin**<br>
   Open **Settings → Community plugins** and turn on **Material Icon Theme**.
@@ -164,4 +166,4 @@ Missing an icon for a file type? It is usually worth requesting it [upstream](ht
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). The bundled icon artwork carries its own upstream licence — see [NOTICE](NOTICE).

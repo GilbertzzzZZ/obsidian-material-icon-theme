@@ -3,5 +3,3 @@ main.js
 *.js.map
 src/icon-data.ts
 AGENTS.md
-dist/
-material-icon-theme-*.zip

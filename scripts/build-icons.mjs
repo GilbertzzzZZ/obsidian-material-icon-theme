@@ -121,6 +121,33 @@ export const folderOpenIconKey = ${JSON.stringify(folderOpenKey)};
 
 writeFileSync(join(rootDir, 'src/icon-data.ts'), output, 'utf-8');
 
+// ── Keep the checked-in declaration honest ────────────────────────────────────
+// icon-data.ts is gitignored, so fresh clones and Obsidian's review bot
+// type-check against src/icon-data.d.ts instead. If the two drift, every value
+// imported from this module silently degrades to `any`. Fail loudly instead.
+const declPath = join(rootDir, 'src/icon-data.d.ts');
+const declSrc = readFileSync(declPath, 'utf-8');
+
+const namesIn = (src, constRe) =>
+  new Set([
+    ...[...src.matchAll(constRe)].map((m) => m[1]),
+    ...[...src.matchAll(/export interface (\w+)/g)].map((m) => m[1]),
+  ]);
+
+const generatedNames = namesIn(output, /export const (\w+)/g);
+const declaredNames = namesIn(declSrc, /export declare const (\w+)/g);
+
+const undeclared = [...generatedNames].filter((n) => !declaredNames.has(n));
+const stale = [...declaredNames].filter((n) => !generatedNames.has(n));
+
+if (undeclared.length || stale.length) {
+  console.error('\n❌ src/icon-data.d.ts is out of sync with the generated module.');
+  if (undeclared.length) console.error(`   Generated but not declared: ${undeclared.join(', ')}`);
+  if (stale.length) console.error(`   Declared but not generated: ${stale.join(', ')}`);
+  console.error('   Update the declaration — it is what fresh clones type-check against.\n');
+  process.exit(1);
+}
+
 const mappings =
   Object.keys(extKeys).length +
   Object.keys(nameKeys).length +

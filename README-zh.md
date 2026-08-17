@@ -54,8 +54,10 @@
 
 ## 快速开始
 
+> 需要 Obsidian 1.13.0 或更高版本。
+
 1. **安装插件**<br>
-  从 [Releases](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/releases) 下载：把 `material-icon-theme-x.x.x.zip` 解压到 `.obsidian/plugins/`，或把 `main.js`、`manifest.json`、`styles.css` 放进 `.obsidian/plugins/material-icon-theme/`。
+  从 [Releases](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/releases) 下载 `main.js`、`manifest.json`、`styles.css`，放进 `.obsidian/plugins/material-icon-theme/`。
 
 2. **启用插件**<br>
   打开 **设置 → 第三方插件**，开启 **Material Icon Theme**。
@@ -164,4 +166,4 @@ npm run build-icons   # 仅重新生成 src/icon-data.ts
 
 ## 许可证
 
-[MIT](LICENSE)
+[MIT](LICENSE)。随插件分发的图标素材有其上游许可证，见 [NOTICE](NOTICE)。

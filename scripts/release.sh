@@ -8,11 +8,8 @@ TAG="${1:-$(node -p "require('./manifest.json').version")}"
 echo "Building..."
 npm run build
 
-echo "Packaging..."
-chmod +x scripts/package-release.sh
-ZIP="$(./scripts/package-release.sh)"
-
-ASSETS=(main.js manifest.json styles.css "$ZIP")
+# Obsidian installs these three files directly; no zip is needed.
+ASSETS=(main.js manifest.json styles.css)
 
 echo "Publishing release ${TAG}..."
 if gh release view "$TAG" &>/dev/null; then
