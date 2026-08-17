@@ -567,6 +567,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
   private containers = new Map<HTMLElement, MutationObserver>();
   private folderObservers = new Map<HTMLElement, MutationObserver>();
   private themeObserver: MutationObserver | null = null;
+  private themeDoc: Document | null = null;
   private refreshTimer: number | null = null;
   private refreshDeadline: number | null = null;
   private bootTimers: number[] = [];
@@ -575,8 +576,6 @@ export default class MaterialFileIconsPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new MfiSettingTab(this.app, this));
-
-    this.isDark = activeDocument.body.hasClass('theme-dark');
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.syncLeaves()));
 
@@ -597,24 +596,20 @@ export default class MaterialFileIconsPlugin extends Plugin {
       this.bootTimers = [];
     });
 
-    this.themeObserver = new MutationObserver(() => {
-      const nowDark = activeDocument.body.hasClass('theme-dark');
-      if (nowDark !== this.isDark) {
-        this.isDark = nowDark;
-        this.resetAllIcons();
-        this.refreshIcons();
-      }
-    });
-    this.themeObserver.observe(activeDocument.body, { attributes: true, attributeFilter: ['class'] });
     this.register(() => this.themeObserver?.disconnect());
   }
 
   onunload() {
+    // Order matters: resetAllIcons() walks the container map, so it has to run
+    // before disconnectContainers() empties it.
+    this.resetAllIcons();
     this.disconnectContainers();
+
     this.themeObserver?.disconnect();
+    this.themeDoc = null;
+
     if (this.refreshTimer !== null) window.clearTimeout(this.refreshTimer);
     this.refreshDeadline = null;
-    this.resetAllIcons();
   }
 
   // ── Leaf management ─────────────────────────────────────────────────────────
@@ -906,9 +901,15 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
 
   private resetAllIcons() {
-    activeDocument.querySelectorAll(`[${APPLIED_ATTR}]`).forEach(el => el.removeAttribute(APPLIED_ATTR));
-    activeDocument.querySelectorAll(`[${OBSERVED_ATTR}]`).forEach(el => el.removeAttribute(OBSERVED_ATTR));
-    activeDocument.querySelectorAll(`.${ICON_CLASS}`).forEach(el => el.remove());
+    // Scoped to the explorers this instance owns. A document-wide query would
+    // hit whichever window currently has focus, which in a multi-vault setup is
+    // often somebody else's.
+    for (const container of this.containers.keys()) {
+      container.querySelectorAll(`[${APPLIED_ATTR}]`).forEach(el => el.removeAttribute(APPLIED_ATTR));
+      container.querySelectorAll(`[${OBSERVED_ATTR}]`).forEach(el => el.removeAttribute(OBSERVED_ATTR));
+      container.querySelectorAll(`.${ICON_CLASS}`).forEach(el => el.remove());
+    }
+
     this.folderObservers.forEach(obs => obs.disconnect());
     this.folderObservers.clear();
   }
