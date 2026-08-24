@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/releases"><img src="https://img.shields.io/github/v/release/GilbertzzzZZ/obsidian-material-icon-theme?style=for-the-badge&colorA=263238&colorB=4CAF50&label=VERSION" alt="Release"></a>
-  <a href="https://github.com/GilbertzzzZZ/obsidian-material-icon-theme"><img src="https://img.shields.io/badge/Icons-1125-43A047?style=for-the-badge&colorA=263238&colorB=43A047" alt="Icons"></a>
+  <a href="https://github.com/GilbertzzzZZ/obsidian-material-icon-theme"><img src="https://img.shields.io/badge/Icons-1126-43A047?style=for-the-badge&colorA=263238&colorB=43A047" alt="Icons"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-1976D2?style=for-the-badge&colorA=263238&colorB=1976D2" alt="License"></a>
 </p>
 
@@ -46,7 +46,7 @@
 ## Features
 
 - Material Design file & folder icons for the Obsidian file explorer
-- 1125 icons covering 2131 file names, 1380 extensions and 269 folder names
+- 1126 icons covering 2135 file names, 1379 extensions and 269 folder names
 - Custom icon associations through a searchable picker
 - Independent toggles for file and folder icons
 - Settings UI in 10 languages

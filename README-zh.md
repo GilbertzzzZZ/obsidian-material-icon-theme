@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/releases"><img src="https://img.shields.io/github/v/release/GilbertzzzZZ/obsidian-material-icon-theme?style=for-the-badge&colorA=263238&colorB=4CAF50&label=VERSION" alt="Release"></a>
-  <a href="https://github.com/GilbertzzzZZ/obsidian-material-icon-theme"><img src="https://img.shields.io/badge/Icons-1125-43A047?style=for-the-badge&colorA=263238&colorB=43A047" alt="Icons"></a>
+  <a href="https://github.com/GilbertzzzZZ/obsidian-material-icon-theme"><img src="https://img.shields.io/badge/Icons-1126-43A047?style=for-the-badge&colorA=263238&colorB=43A047" alt="Icons"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-1976D2?style=for-the-badge&colorA=263238&colorB=1976D2" alt="License"></a>
 </p>
 
@@ -46,7 +46,7 @@
 ## 功能
 
 - 为 Obsidian 文件浏览器提供 Material Design 文件与文件夹图标
-- 1125 个图标，覆盖 2131 个文件名、1380 个扩展名和 269 个文件夹名
+- 1126 个图标，覆盖 2135 个文件名、1379 个扩展名和 269 个文件夹名
 - 通过可搜索的图标选择器自定义图标关联
 - 文件图标与文件夹图标可独立开关
 - 设置界面支持 10 种语言
