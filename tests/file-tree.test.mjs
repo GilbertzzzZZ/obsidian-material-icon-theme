@@ -141,7 +141,7 @@ function createFolderRow(path) {
   children.className = 'tree-item-children';
   item.appendChild(children);
 
-  return { item, title };
+  return { item, title, children };
 }
 
 async function flushMutations() {
@@ -167,7 +167,9 @@ test('recycled rows keep the same icon host while data-path changes', async () =
   plugin.injectFileIcon(title, title.dataset.path);
   const iconBefore = title.querySelector('.mfi-icon');
   let scheduledRefreshes = 0;
+  let pruneCalls = 0;
   plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  plugin.pruneFolderObservers = () => { pruneCalls += 1; };
   const observer = plugin.observeContainer(container);
 
   title.dataset.path = 'after.ts';
@@ -176,6 +178,39 @@ test('recycled rows keep the same icon host while data-path changes', async () =
   assert.equal(title.querySelector('.mfi-icon') === iconBefore, true);
   assert.equal(title.querySelector('svg')?.dataset.icon, 'typescript');
   assert.equal(title.getAttribute('data-mfi-applied'), '1');
+  assert.equal(scheduledRefreshes, 0);
+  assert.equal(pruneCalls, 0);
+  observer.disconnect();
+});
+
+test('a file row recycled as a folder keeps its icon host and observes expansion', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  const { item, title } = createFileRow('before.md');
+  const content = title.querySelector('.nav-file-title-content');
+  container.appendChild(item);
+  document.body.appendChild(container);
+
+  plugin.injectFileIcon(title, title.dataset.path);
+  const iconBefore = title.querySelector('.mfi-icon');
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+
+  item.className = 'tree-item nav-folder is-collapsed';
+  title.className = 'tree-item-self nav-folder-title';
+  content.className = 'nav-folder-title-content';
+  title.dataset.path = 'src';
+  await flushMutations();
+
+  assert.equal(title.querySelector('.mfi-icon') === iconBefore, true);
+  assert.equal(title.querySelector('svg')?.dataset.icon, 'folder');
+  assert.equal(plugin.folderObservers.size, 1);
+
+  item.classList.remove('is-collapsed');
+  await flushMutations();
+
+  assert.equal(title.querySelector('svg')?.dataset.icon, 'folder-open');
   assert.equal(scheduledRefreshes, 0);
   observer.disconnect();
 });
@@ -203,11 +238,14 @@ test('new tree items receive icons without scheduling a whole-tree refresh', asy
 
 test('expanding a folder updates its SVG without scheduling a refresh', async () => {
   const plugin = createPlugin();
-  const { item, title } = createFolderRow('src');
+  const { item, title, children } = createFolderRow('src');
+  const { item: childItem, title: childTitle } = createFileRow('src/index.ts');
+  children.appendChild(childItem);
   document.body.appendChild(item);
 
   plugin.processItem(item);
   const iconBefore = title.querySelector('.mfi-icon');
+  assert.equal(childTitle.querySelector('.mfi-icon'), null);
   let scheduledRefreshes = 0;
   plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
 
@@ -216,5 +254,211 @@ test('expanding a folder updates its SVG without scheduling a refresh', async ()
 
   assert.equal(title.querySelector('.mfi-icon') === iconBefore, true);
   assert.equal(title.querySelector('svg')?.dataset.icon, 'folder-open');
+  assert.equal(childTitle.querySelector('svg')?.dataset.icon, 'typescript');
+  assert.equal(childTitle.getAttribute('data-mfi-applied'), '1');
   assert.equal(scheduledRefreshes, 0);
+});
+
+test('removing a folder releases its observer without a whole-tree refresh', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+  const { item } = createFolderRow('src');
+
+  container.appendChild(item);
+  await flushMutations();
+  assert.equal(plugin.folderObservers.size, 1);
+
+  item.remove();
+  await flushMutations();
+
+  assert.equal(plugin.folderObservers.size, 0);
+  assert.equal(scheduledRefreshes, 0);
+  observer.disconnect();
+});
+
+test('a folder row recycled as a file releases its folder observer', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  const { item, title } = createFolderRow('src');
+  const content = title.querySelector('.nav-folder-title-content');
+  container.appendChild(item);
+  document.body.appendChild(container);
+
+  plugin.processItem(item);
+  const iconBefore = title.querySelector('.mfi-icon');
+  assert.equal(plugin.folderObservers.size, 1);
+  const observer = plugin.observeContainer(container);
+
+  item.className = 'tree-item nav-file';
+  title.className = 'tree-item-self nav-file-title';
+  content.className = 'nav-file-title-content';
+  title.dataset.path = 'src/index.ts';
+  await flushMutations();
+
+  assert.equal(title.querySelector('.mfi-icon') === iconBefore, true);
+  assert.equal(title.querySelector('svg')?.dataset.icon, 'typescript');
+  assert.equal(plugin.folderObservers.size, 0);
+  assert.equal(item.hasAttribute('data-mfi-obs'), false);
+  observer.disconnect();
+});
+
+test('a recycled row without data-path schedules the fallback refresh', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  const { item, title } = createFileRow('before.md');
+  container.appendChild(item);
+  document.body.appendChild(container);
+
+  plugin.injectFileIcon(title, title.dataset.path);
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+
+  title.removeAttribute('data-path');
+  await flushMutations();
+
+  assert.equal(scheduledRefreshes, 1);
+  observer.disconnect();
+});
+
+test('disabled file and folder icons do not schedule a refresh', async () => {
+  const plugin = createPlugin();
+  plugin.settings.applyToFiles = false;
+  plugin.settings.applyToFolders = false;
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+  const { item, title } = createFileRow('new.ts');
+
+  container.appendChild(item);
+  await flushMutations();
+
+  assert.equal(title.querySelector('.mfi-icon'), null);
+  assert.equal(title.hasAttribute('data-mfi-applied'), false);
+  assert.equal(scheduledRefreshes, 0);
+  observer.disconnect();
+});
+
+test('recycling a file as a folder removes the old icon when folder icons are disabled', async () => {
+  const plugin = createPlugin();
+  plugin.settings.applyToFolders = false;
+  const container = document.createElement('div');
+  const { item, title } = createFileRow('before.md');
+  const content = title.querySelector('.nav-file-title-content');
+  container.appendChild(item);
+  document.body.appendChild(container);
+
+  plugin.injectFileIcon(title, title.dataset.path);
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+
+  item.className = 'tree-item nav-folder is-collapsed';
+  title.className = 'tree-item-self nav-folder-title';
+  content.className = 'nav-folder-title-content';
+  title.dataset.path = 'src';
+  await flushMutations();
+
+  assert.equal(title.querySelector('.mfi-icon'), null);
+  assert.equal(title.hasAttribute('data-mfi-applied'), false);
+  assert.equal(scheduledRefreshes, 0);
+  observer.disconnect();
+});
+
+test('recycling a folder as a file removes the old icon when file icons are disabled', async () => {
+  const plugin = createPlugin();
+  plugin.settings.applyToFiles = false;
+  const container = document.createElement('div');
+  const { item, title } = createFolderRow('src');
+  const content = title.querySelector('.nav-folder-title-content');
+  container.appendChild(item);
+  document.body.appendChild(container);
+
+  plugin.processItem(item);
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+
+  item.className = 'tree-item nav-file';
+  title.className = 'tree-item-self nav-file-title';
+  content.className = 'nav-file-title-content';
+  title.dataset.path = 'src/index.ts';
+  await flushMutations();
+
+  assert.equal(title.querySelector('.mfi-icon'), null);
+  assert.equal(title.hasAttribute('data-mfi-applied'), false);
+  assert.equal(plugin.folderObservers.size, 0);
+  assert.equal(scheduledRefreshes, 0);
+  observer.disconnect();
+});
+
+test('a failed recycled-row injection keeps the icon host and schedules fallback', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  const { item, title } = createFileRow('before.md');
+  container.appendChild(item);
+  document.body.appendChild(container);
+
+  plugin.injectFileIcon(title, title.dataset.path);
+  const iconBefore = title.querySelector('.mfi-icon');
+  title.querySelector('.nav-file-title-content').className = 'pending-title-content';
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+
+  title.dataset.path = 'after.ts';
+  await flushMutations();
+
+  assert.equal(title.querySelector('.mfi-icon') === iconBefore, true);
+  assert.equal(title.hasAttribute('data-mfi-applied'), false);
+  assert.equal(scheduledRefreshes, 1);
+  observer.disconnect();
+});
+
+test('an added expanded folder processes its existing child subtree locally', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+  const { item, title, children } = createFolderRow('src');
+  const { item: childItem, title: childTitle } = createFileRow('src/index.ts');
+  item.classList.remove('is-collapsed');
+  children.appendChild(childItem);
+
+  container.appendChild(item);
+  await flushMutations();
+
+  assert.equal(title.querySelector('svg')?.dataset.icon, 'folder-open');
+  assert.equal(childTitle.querySelector('svg')?.dataset.icon, 'typescript');
+  assert.equal(scheduledRefreshes, 0);
+  observer.disconnect();
+});
+
+test('an incomplete added tree item schedules the fallback refresh', async () => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  let scheduledRefreshes = 0;
+  plugin.scheduleRefresh = () => { scheduledRefreshes += 1; };
+  const observer = plugin.observeContainer(container);
+  const item = document.createElement('div');
+  item.className = 'tree-item nav-file';
+
+  container.appendChild(item);
+  await flushMutations();
+
+  assert.equal(scheduledRefreshes, 1);
+  observer.disconnect();
 });

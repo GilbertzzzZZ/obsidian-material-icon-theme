@@ -702,6 +702,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
   private observeContainer(container: HTMLElement): MutationObserver {
     const obs = new MutationObserver(mutations => {
       let needsRefresh = false;
+      let shouldPruneFolderObservers = false;
 
       for (const m of mutations) {
         if (m.type === 'attributes' && m.attributeName === 'data-path') {
@@ -716,6 +717,15 @@ export default class MaterialFileIconsPlugin extends Plugin {
           continue;
         }
         if (m.type === 'childList') {
+          if (
+            Array.from(m.removedNodes).some(
+              node =>
+                node.instanceOf(HTMLElement) &&
+                (node.classList.contains('tree-item') || Boolean(node.querySelector('.tree-item')))
+            )
+          ) {
+            shouldPruneFolderObservers = true;
+          }
           for (const node of Array.from(m.addedNodes)) {
             const processed = this.processAddedNode(node);
             if (processed === false) needsRefresh = true;
@@ -723,6 +733,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
         }
       }
 
+      if (shouldPruneFolderObservers) this.pruneFolderObservers();
       if (needsRefresh) this.scheduleRefresh(0);
     });
 
@@ -859,10 +870,26 @@ export default class MaterialFileIconsPlugin extends Plugin {
     if (!itemEl?.classList.contains('tree-item')) return false;
 
     if (itemEl.classList.contains('nav-folder')) {
-      if (!this.settings.applyToFolders) return true;
+      if (!itemEl.hasAttribute(OBSERVED_ATTR)) {
+        itemEl.setAttribute(OBSERVED_ATTR, '1');
+        this.observeFolder(itemEl);
+      }
+      if (!this.settings.applyToFolders) {
+        this.removeRowIcon(titleEl);
+        return true;
+      }
       this.injectFolderIcon(titleEl, itemEl.classList.contains('is-collapsed'), true);
     } else {
-      if (!this.settings.applyToFiles) return true;
+      const folderObserver = this.folderObservers.get(itemEl);
+      if (folderObserver) {
+        folderObserver.disconnect();
+        this.folderObservers.delete(itemEl);
+        itemEl.removeAttribute(OBSERVED_ATTR);
+      }
+      if (!this.settings.applyToFiles) {
+        this.removeRowIcon(titleEl);
+        return true;
+      }
       const path = titleEl.dataset.path ?? '';
       if (!path) return false;
       this.injectFileIcon(titleEl, path, true);
@@ -881,6 +908,11 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
         const titleEl = folderEl.querySelector<HTMLElement>(':scope > .tree-item-self');
         if (titleEl) this.updateFolderIcon(titleEl, isCollapsed);
+        if (!isCollapsed) {
+          folderEl
+            .querySelectorAll<HTMLElement>(':scope > .tree-item-children > .tree-item')
+            .forEach(child => this.processItem(child));
+        }
       }
     });
     obs.observe(folderEl, {
@@ -946,7 +978,8 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
   private injectFileIcon(titleEl: HTMLElement, path: string, force = false) {
     if (!this.settings.applyToFiles) return;
-    if (!force && titleEl.hasAttribute(APPLIED_ATTR)) return;
+    if (force) titleEl.removeAttribute(APPLIED_ATTR);
+    else if (titleEl.hasAttribute(APPLIED_ATTR)) return;
 
     // Marked only after the icon is actually in place. Marking first would leave
     // rows that failed here permanently skipped, with no path back.
@@ -959,7 +992,8 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
   private injectFolderIcon(titleEl: HTMLElement, collapsed: boolean, force = false) {
     if (!this.settings.applyToFolders) return;
-    if (!force && titleEl.hasAttribute(APPLIED_ATTR)) return;
+    if (force) titleEl.removeAttribute(APPLIED_ATTR);
+    else if (titleEl.hasAttribute(APPLIED_ATTR)) return;
 
     const contentEl = titleEl.querySelector('.nav-folder-title-content');
     if (!contentEl) return;
@@ -972,6 +1006,11 @@ export default class MaterialFileIconsPlugin extends Plugin {
       `${ICON_CLASS} ${FOLDER_ICON_CLASS}`
     );
     titleEl.setAttribute(APPLIED_ATTR, '1');
+  }
+
+  private removeRowIcon(titleEl: HTMLElement) {
+    titleEl.removeAttribute(APPLIED_ATTR);
+    titleEl.querySelectorAll(`:scope > .${ICON_CLASS}`).forEach(el => el.remove());
   }
 
   /**
