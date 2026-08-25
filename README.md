@@ -129,6 +129,7 @@ Matching is case-insensitive throughout, so `CLAUDE.md` and `claude.md` resolve 
 
 ```bash
 npm install
+npm test              # file tree regression tests
 npm run dev           # watch mode (does not regenerate icon data)
 npm run build         # full production build
 npm run build-icons   # regenerate src/icon-data.ts only
@@ -155,6 +156,8 @@ Icon artwork comes from [Material Icon Theme](https://github.com/material-extens
 ## Contributing
 
 Issues and pull requests are welcome.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development and test workflow.
 
 - 🐛 **Report a bug or request an icon**<br>
   [Open an issue](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/issues) with your Obsidian version, plugin version, and steps to reproduce.

@@ -129,6 +129,7 @@ cp main.js manifest.json styles.css /你的库路径/.obsidian/plugins/material-
 
 ```bash
 npm install
+npm test              # 文件树回归测试
 npm run dev           # watch 模式（不会重新生成图标数据）
 npm run build         # 完整生产构建
 npm run build-icons   # 仅重新生成 src/icon-data.ts
@@ -155,6 +156,8 @@ npm run build-icons   # 仅重新生成 src/icon-data.ts
 ## 参与贡献
 
 欢迎提交 Issue 和 Pull Request。
+
+开发与测试流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 - 🐛 **报告问题或申请图标**<br>
   [提交 Issue](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/issues)，并附上 Obsidian 版本、插件版本和复现步骤。

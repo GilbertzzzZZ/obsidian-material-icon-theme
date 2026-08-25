@@ -6,6 +6,8 @@ Thanks for your interest in improving this plugin.
 
 ```bash
 npm install
+npm test
+npm run lint
 npm run build
 ```
 
@@ -20,7 +22,7 @@ Do **not** commit or hand-edit `src/icon-data.ts` or `main.js`. Regenerate them 
 ## Pull requests
 
 1. Keep changes focused on the issue you are solving.
-2. Run `npm run build` before opening a PR.
+2. Run `npm test`, `npm run lint`, and `npm run build` before opening a PR.
 3. Describe how you tested the change in Obsidian (desktop and/or mobile if relevant).
 
 ## Issues
