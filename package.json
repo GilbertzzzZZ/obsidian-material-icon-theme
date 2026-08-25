@@ -24,13 +24,15 @@
     "build-icons": "node scripts/build-icons.mjs",
     "dev": "node esbuild.config.mjs",
     "build": "node scripts/build-icons.mjs && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "esbuild": "^0.25.0",
     "eslint": "^10.8.1",
     "eslint-plugin-obsidianmd": "^0.4.1",
+    "happy-dom": "^20.11.6",
     "material-icon-theme": "^5.38.1",
     "obsidian": "latest",
     "tslib": "^2.6.0",

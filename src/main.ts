@@ -705,23 +705,20 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
       for (const m of mutations) {
         if (m.type === 'attributes' && m.attributeName === 'data-path') {
-          // Obsidian recycles rows by rewriting data-path. Drop the stale icon so
-          // the row re-renders for its new file instead of keeping the old one.
-          if (m.target.instanceOf(HTMLElement)) this.resetRow(m.target);
-          needsRefresh = true;
+          // Obsidian recycles rows by rewriting data-path. Reuse the fixed-width
+          // icon host so the row never collapses while its SVG is replaced.
+          if (
+            !m.target.instanceOf(HTMLElement) ||
+            !this.refreshRecycledRow(m.target)
+          ) {
+            needsRefresh = true;
+          }
           continue;
         }
         if (m.type === 'childList') {
           for (const node of Array.from(m.addedNodes)) {
-            // A subtree can be built detached and attached in one go, so the
-            // added node itself is not always the tree-item.
-            if (
-              node.instanceOf(HTMLElement) &&
-              (node.classList.contains('tree-item') || node.querySelector('.tree-item'))
-            ) {
-              needsRefresh = true;
-              break;
-            }
+            const processed = this.processAddedNode(node);
+            if (processed === false) needsRefresh = true;
           }
         }
       }
@@ -737,6 +734,26 @@ export default class MaterialFileIconsPlugin extends Plugin {
     });
 
     return obs;
+  }
+
+  /** Process attached tree rows before the browser paints them. */
+  private processAddedNode(node: Node): boolean | null {
+    if (!node.instanceOf(HTMLElement)) return null;
+
+    let found = false;
+    let ready = true;
+    if (node.classList.contains('tree-item')) {
+      return this.processItem(node);
+    }
+
+    node.querySelectorAll<HTMLElement>('.tree-item').forEach(item => {
+      const ancestorItem = item.parentElement?.closest('.tree-item');
+      if (ancestorItem && node.contains(ancestorItem)) return;
+      found = true;
+      ready = this.processItem(item) && ready;
+    });
+
+    return found ? ready : null;
   }
 
   /** Drop folder observers whose element Obsidian has already detached. */
@@ -792,10 +809,10 @@ export default class MaterialFileIconsPlugin extends Plugin {
     }
   }
 
-  private processItem(itemEl: HTMLElement) {
+  private processItem(itemEl: HTMLElement): boolean {
     const isFolder = itemEl.classList.contains('nav-folder');
     const titleEl = itemEl.querySelector<HTMLElement>(':scope > .tree-item-self');
-    if (!titleEl) return;
+    if (!titleEl) return false;
 
     if (!titleEl.hasAttribute(APPLIED_ATTR)) {
       // One unhappy row must not abort the whole sweep — the remaining siblings
@@ -814,6 +831,11 @@ export default class MaterialFileIconsPlugin extends Plugin {
       }
     }
 
+    let ready = !(
+      (isFolder ? this.settings.applyToFolders : this.settings.applyToFiles) &&
+      !titleEl.hasAttribute(APPLIED_ATTR)
+    );
+
     if (isFolder) {
       if (!itemEl.hasAttribute(OBSERVED_ATTR)) {
         itemEl.setAttribute(OBSERVED_ATTR, '1');
@@ -822,9 +844,31 @@ export default class MaterialFileIconsPlugin extends Plugin {
       if (!itemEl.classList.contains('is-collapsed')) {
         itemEl
           .querySelectorAll<HTMLElement>(':scope > .tree-item-children > .tree-item')
-          .forEach(child => this.processItem(child));
+          .forEach(child => {
+            ready = this.processItem(child) && ready;
+          });
       }
     }
+
+    return ready;
+  }
+
+  /** Refresh a virtualized row without removing its icon slot. */
+  private refreshRecycledRow(titleEl: HTMLElement): boolean {
+    const itemEl = titleEl.parentElement;
+    if (!itemEl?.classList.contains('tree-item')) return false;
+
+    if (itemEl.classList.contains('nav-folder')) {
+      if (!this.settings.applyToFolders) return true;
+      this.injectFolderIcon(titleEl, itemEl.classList.contains('is-collapsed'), true);
+    } else {
+      if (!this.settings.applyToFiles) return true;
+      const path = titleEl.dataset.path ?? '';
+      if (!path) return false;
+      this.injectFileIcon(titleEl, path, true);
+    }
+
+    return titleEl.hasAttribute(APPLIED_ATTR);
   }
 
   private observeFolder(folderEl: HTMLElement) {
@@ -837,7 +881,6 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
         const titleEl = folderEl.querySelector<HTMLElement>(':scope > .tree-item-self');
         if (titleEl) this.updateFolderIcon(titleEl, isCollapsed);
-        if (!isCollapsed) this.scheduleRefresh(30);
       }
     });
     obs.observe(folderEl, {
@@ -901,9 +944,9 @@ export default class MaterialFileIconsPlugin extends Plugin {
     return table[name] ?? (collapsed ? folderIconKey : folderOpenIconKey);
   }
 
-  private injectFileIcon(titleEl: HTMLElement, path: string) {
+  private injectFileIcon(titleEl: HTMLElement, path: string, force = false) {
     if (!this.settings.applyToFiles) return;
-    if (titleEl.hasAttribute(APPLIED_ATTR)) return;
+    if (!force && titleEl.hasAttribute(APPLIED_ATTR)) return;
 
     // Marked only after the icon is actually in place. Marking first would leave
     // rows that failed here permanently skipped, with no path back.
@@ -914,9 +957,9 @@ export default class MaterialFileIconsPlugin extends Plugin {
     titleEl.setAttribute(APPLIED_ATTR, '1');
   }
 
-  private injectFolderIcon(titleEl: HTMLElement, collapsed: boolean) {
+  private injectFolderIcon(titleEl: HTMLElement, collapsed: boolean, force = false) {
     if (!this.settings.applyToFolders) return;
-    if (titleEl.hasAttribute(APPLIED_ATTR)) return;
+    if (!force && titleEl.hasAttribute(APPLIED_ATTR)) return;
 
     const contentEl = titleEl.querySelector('.nav-folder-title-content');
     if (!contentEl) return;
@@ -936,19 +979,18 @@ export default class MaterialFileIconsPlugin extends Plugin {
    * so fall back to prepending when a theme wraps the label in another element.
    */
   private placeIcon(titleEl: HTMLElement, contentEl: Element, svg: string, className: string) {
-    // createSpan appends to titleEl, so the node is repositioned afterwards.
-    // insertBefore and prepend both move an existing child, never duplicate it.
-    const icon = titleEl.createSpan({ cls: className });
+    let icon = titleEl.querySelector<HTMLElement>(`:scope > .${ICON_CLASS}`);
+    if (!icon) {
+      // createSpan appends to titleEl, so the node is repositioned afterwards.
+      // insertBefore and prepend both move an existing child, never duplicate it.
+      icon = titleEl.createSpan({ cls: className });
+      if (contentEl.parentElement === titleEl) titleEl.insertBefore(icon, contentEl);
+      else titleEl.prepend(icon);
+    } else {
+      icon.className = className;
+    }
+
     renderIconInto(icon, svg, 16);
-
-    if (contentEl.parentElement === titleEl) titleEl.insertBefore(icon, contentEl);
-    else titleEl.prepend(icon);
-  }
-
-  /** Strip our marker and icon from a single row so it can be rendered again. */
-  private resetRow(titleEl: HTMLElement) {
-    titleEl.removeAttribute(APPLIED_ATTR);
-    titleEl.querySelectorAll(`:scope > .${ICON_CLASS}`).forEach(el => el.remove());
   }
 
   private updateFolderIcon(titleEl: HTMLElement, collapsed: boolean) {

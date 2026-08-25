@@ -23,6 +23,7 @@ export default tseslint.config(
       'src/**/*.d.ts',
       '*.mjs',
       'scripts/**',
+      'tests/**',
     ],
   },
   ...tseslint.configs.recommendedTypeChecked,
