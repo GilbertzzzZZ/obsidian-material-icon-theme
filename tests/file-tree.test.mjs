@@ -51,7 +51,7 @@ const bundle = await build({
               gradient: { dark: SVG.gradientA, light: SVG.gradientB },
             })};
             export const fileExtensionKeys = { ts: 'typescript', grad: 'gradient' };
-            export const fileNameKeys = { 'vercel.json': 'vercel' };
+            export const fileNameKeys = { 'vercel.json': 'vercel', constructor: 'typescript' };
             export const folderNameKeys = {};
             export const folderNameOpenKeys = {};
             export const defaultFileIconKey = 'file';
@@ -186,6 +186,29 @@ async function createLoadedThemePlugin(initialDark) {
     },
   };
 }
+
+test('lookup: inherited names use folder defaults', () => {
+  const plugin = createPlugin();
+  for (const name of ['constructor', '__proto__', 'CONSTRUCTOR']) {
+    assert.equal(plugin.getFolderIconKey(name, true), 'folder');
+    assert.equal(plugin.getFolderIconKey(name, false), 'folder-open');
+    const { item, title } = createFolderRow(name);
+    document.body.appendChild(item);
+    plugin.injectFolderIcon(title, true);
+    assert.equal(title.querySelector('svg').dataset.icon, 'folder');
+    plugin.updateFolderIcon(title, false);
+    assert.equal(title.querySelector('svg').dataset.icon, 'folder-open');
+  }
+});
+
+test('lookup: own entries win and inherited icon keys are rejected', () => {
+  const plugin = createPlugin();
+  assert.equal(plugin.getFileIconSvg('CONSTRUCTOR'), SVG.typescript);
+  assert.equal(plugin.getFileIconSvg('sample.ts'), SVG.typescript);
+  assert.equal(plugin.getFileIconSvg('sample.unknown'), SVG.file);
+  assert.equal(plugin.getIconSet('constructor').light, SVG.file);
+  assert.equal(plugin.getIconSet('__proto__').light, SVG.file);
+});
 
 test('theme: startup and changes use the host scheme', async t => {
   const h = await createLoadedThemePlugin(true);

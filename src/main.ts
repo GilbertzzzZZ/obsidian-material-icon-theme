@@ -37,6 +37,10 @@ const MAX_REFRESH_WAIT = 200;
 // times so icons land regardless of how long the tree takes to appear.
 const BOOT_RETRY_DELAYS = [0, 200, 600, 1500, 3000, 6000];
 
+function ownValue<T>(table: Record<string, T>, key: string): T | undefined {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
+}
+
 // ── SVG helpers ───────────────────────────────────────────────────────────────
 
 let svgInstanceId = 0;
@@ -963,7 +967,9 @@ export default class MaterialFileIconsPlugin extends Plugin {
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   private getIconSet(key: string): IconSet {
-    return iconRegistry[key] ?? iconRegistry[defaultFileIconKey] ?? { dark: '', light: '' };
+    return ownValue(iconRegistry, key)
+      ?? ownValue(iconRegistry, defaultFileIconKey)
+      ?? { dark: '', light: '' };
   }
 
   private getSvg(iconSet: IconSet): string {
@@ -987,19 +993,19 @@ export default class MaterialFileIconsPlugin extends Plugin {
     // 1. Directory-scoped filename, e.g. `.config/prettierrc` or `.github/FUNDING.yml`.
     // More specific than a bare filename, so it wins.
     if (segments.length >= 2) {
-      const scopedKey = fileNameKeys[segments.slice(-2).join('/')];
+      const scopedKey = ownValue(fileNameKeys, segments.slice(-2).join('/'));
       if (scopedKey) return this.getSvg(this.getIconSet(scopedKey));
     }
 
     // 2. Exact filename match
-    const nameKey = fileNameKeys[lower];
+    const nameKey = ownValue(fileNameKeys, lower);
     if (nameKey) return this.getSvg(this.getIconSet(nameKey));
 
     // 3. Extension match — longest suffix first
     const parts = lower.split('.');
     for (let i = 1; i < parts.length; i++) {
       const ext = parts.slice(i).join('.');
-      const extKey = fileExtensionKeys[ext];
+      const extKey = ownValue(fileExtensionKeys, ext);
       if (extKey) return this.getSvg(this.getIconSet(extKey));
     }
 
@@ -1010,7 +1016,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
   private getFolderIconKey(path: string, collapsed: boolean): string {
     const name = path.toLowerCase().split('/').pop() ?? '';
     const table = collapsed ? folderNameKeys : folderNameOpenKeys;
-    return table[name] ?? (collapsed ? folderIconKey : folderOpenIconKey);
+    return ownValue(table, name) ?? (collapsed ? folderIconKey : folderOpenIconKey);
   }
 
   private injectFileIcon(titleEl: HTMLElement, path: string, force = false) {
