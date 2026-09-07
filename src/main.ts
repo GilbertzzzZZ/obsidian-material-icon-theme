@@ -625,8 +625,6 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
   private containers = new Map<HTMLElement, MutationObserver>();
   private folderObservers = new Map<HTMLElement, MutationObserver>();
-  private themeObserver: MutationObserver | null = null;
-  private themeDoc: Document | null = null;
   private refreshTimer: number | null = null;
   private refreshDeadline: number | null = null;
   private bootTimers: number[] = [];
@@ -634,6 +632,13 @@ export default class MaterialFileIconsPlugin extends Plugin {
 
   async onload() {
     await this.loadSettings();
+    this.isDark = this.app.isDarkMode();
+    this.registerEvent(this.app.workspace.on('css-change', () => {
+      const nextIsDark = this.app.isDarkMode();
+      if (nextIsDark === this.isDark) return;
+      this.isDark = nextIsDark;
+      this.resetAndRefresh();
+    }));
     this.addSettingTab(new MfiSettingTab(this.app, this));
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.syncLeaves()));
@@ -655,7 +660,6 @@ export default class MaterialFileIconsPlugin extends Plugin {
       this.bootTimers = [];
     });
 
-    this.register(() => this.themeObserver?.disconnect());
   }
 
   onunload() {
@@ -663,9 +667,6 @@ export default class MaterialFileIconsPlugin extends Plugin {
     // before disconnectContainers() empties it.
     this.resetAllIcons();
     this.disconnectContainers();
-
-    this.themeObserver?.disconnect();
-    this.themeDoc = null;
 
     if (this.refreshTimer !== null) window.clearTimeout(this.refreshTimer);
     this.refreshDeadline = null;

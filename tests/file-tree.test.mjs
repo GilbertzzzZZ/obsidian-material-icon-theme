@@ -8,6 +8,8 @@ const SVG = {
   typescript: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="typescript"></svg>',
   folder: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="folder"></svg>',
   folderOpen: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="folder-open"></svg>',
+  vercelDark: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-dark"></svg>',
+  vercelLight: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-light"></svg>',
 };
 
 const bundle = await build({
@@ -43,9 +45,10 @@ const bundle = await build({
               typescript: { dark: SVG.typescript, light: SVG.typescript },
               folder: { dark: SVG.folder, light: SVG.folder },
               'folder-open': { dark: SVG.folderOpen, light: SVG.folderOpen },
+              vercel: { dark: SVG.vercelDark, light: SVG.vercelLight },
             })};
             export const fileExtensionKeys = { ts: 'typescript' };
-            export const fileNameKeys = {};
+            export const fileNameKeys = { 'vercel.json': 'vercel' };
             export const folderNameKeys = {};
             export const folderNameOpenKeys = {};
             export const defaultFileIconKey = 'file';
@@ -148,6 +151,71 @@ async function flushMutations() {
   await Promise.resolve();
   await new Promise(resolve => setImmediate(resolve));
 }
+
+async function createLoadedThemePlugin(initialDark) {
+  const plugin = createPlugin();
+  const events = new Map();
+  const cleanups = [];
+  let dark = initialDark;
+  plugin.bootTimers = [];
+  plugin.app = {
+    isDarkMode: () => dark,
+    workspace: {
+      on(name, callback) {
+        events.set(name, callback);
+        return { name };
+      },
+      onLayoutReady() {},
+    },
+  };
+  plugin.loadSettings = async () => {};
+  plugin.addSettingTab = () => {};
+  plugin.registerEvent = ref => cleanups.push(() => events.delete(ref.name));
+  plugin.register = callback => cleanups.push(callback);
+  await plugin.onload();
+  return {
+    plugin,
+    events,
+    setDark(value) { dark = value; },
+    dispose() {
+      plugin.onunload();
+      cleanups.forEach(callback => callback());
+    },
+  };
+}
+
+test('theme: startup and changes use the host scheme', async t => {
+  const h = await createLoadedThemePlugin(true);
+  t.after(() => h.dispose());
+  assert.equal(h.plugin.getFileIconSvg('vercel.json'), SVG.vercelDark);
+
+  const container = document.createElement('div');
+  const { item, title } = createFileRow('vercel.json');
+  container.appendChild(item);
+  document.body.appendChild(container);
+  h.plugin.containers.set(container, h.plugin.observeContainer(container));
+  h.plugin.refreshIcons();
+  assert.equal(title.querySelector('svg').dataset.icon, 'vercel-dark');
+
+  h.setDark(false);
+  h.events.get('css-change')();
+  assert.equal(title.querySelector('svg').dataset.icon, 'vercel-light');
+
+  const unchanged = title.querySelector('svg');
+  h.events.get('css-change')();
+  assert.equal(title.querySelector('svg'), unchanged);
+
+  h.setDark(true);
+  h.events.get('css-change')();
+  assert.equal(title.querySelector('svg').dataset.icon, 'vercel-dark');
+});
+
+test('theme: registered callbacks are removed on unload', async () => {
+  const h = await createLoadedThemePlugin(false);
+  assert.equal(h.events.has('css-change'), true);
+  h.dispose();
+  assert.equal(h.events.has('css-change'), false);
+});
 
 test.afterEach(() => {
   document.body.replaceChildren();
