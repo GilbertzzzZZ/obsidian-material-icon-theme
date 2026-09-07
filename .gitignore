@@ -2,7 +2,6 @@ node_modules/
 main.js
 *.js.map
 src/icon-data.ts
-AGENTS.md
 
 # Local Obsidian vault used for testing the plugin in place
 .obsidian/
