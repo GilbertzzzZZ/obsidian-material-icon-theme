@@ -67,8 +67,8 @@
 
 **执行前检查**
 
-- [ ] 阅读并遵守实际环境的 `AGENTS.md`，确认工作目录类型，保留已有改动。
-- [ ] 执行以下只读及远端引用同步检查，确认基线是否发生变化。
+- [x] 阅读并遵守实际环境的 `AGENTS.md`，确认工作目录类型，保留已有改动。
+- [x] 执行以下只读及远端引用同步检查，确认基线是否发生变化。
 
 ```bash
 git status --short
@@ -78,13 +78,13 @@ git log --oneline HEAD..origin/main
 git merge-base --is-ancestor b7a3b06ab5904aa2bea8a56109e8d8c6a952c8a5 origin/main
 ```
 
-- [ ] 若存在更新，检查涉及本计划文件的差异并校准计划，不覆盖其他任务的改动。
-- [ ] 使用独立命名分支 `codex/fix-plugin-quality`。主仓库中确认未提交内容仅含本计划、且任务分支尚未创建时，执行下列命令。已有任务分支则核对后继续，不重复创建。需要新工作树时先执行 `superpowers:using-git-worktrees`，不在工作树检出 `main`。
+- [x] 若存在更新，检查涉及本计划文件的差异并校准计划，不覆盖其他任务的改动。
+- [x] 使用独立命名分支 `codex/fix-plugin-quality`。主仓库中确认未提交内容仅含本计划、且任务分支尚未创建时，执行下列命令。已有任务分支则核对后继续，不重复创建。需要新工作树时先执行 `superpowers:using-git-worktrees`，不在工作树检出 `main`。
 
 ```bash
 git switch -c codex/fix-plugin-quality origin/main
 ```
-- [ ] 使用 Node.js 22 与 npm 10。执行基线检查，出现失败先定位环境或既有问题，不通过删测试继续。
+- [x] 使用 Node.js 22 与 npm 10。执行基线检查，出现失败先定位环境或既有问题，不通过删测试继续。
 
 ```bash
 node --version
@@ -95,7 +95,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] 尚未提交的计划须先加入任务分支，按下列命令单独提交并推送。已包含计划的提交不重复创建。
+- [x] 尚未提交的计划须先加入任务分支，按下列命令单独提交并推送。已包含计划的提交不重复创建。
 
 ```bash
 git add docs/superpowers/plans/2026-09-07-plugin-quality-fixes.md
@@ -104,7 +104,7 @@ git commit -m "docs: 规划插件质量修复" -m "固定五项审查问题的�
 git push -u origin HEAD
 ```
 
-- [ ] 每个实现任务通过验证后按逻辑单元提交并推送，提交说明保留改动范围和行为变化。下列提交命令只用于已获实施授权的阶段。
+- [x] 每个实现任务通过验证后按逻辑单元提交并推送，提交说明保留改动范围和行为变化。下列提交命令只用于已获实施授权的阶段。
 
 ---
 
@@ -126,7 +126,7 @@ git push -u origin HEAD
 - Produces：保留 `plugin.isDark: boolean`，在加载后和主题变化后与宿主一致。
 - Produces：测试辅助函数 `createLoadedThemePlugin(initialDark)`，返回 `{ plugin, events, setDark, dispose }`。
 
-- [ ] **Step 1：增加能区分深浅主题的测试素材。** 在既有 `SVG` 常量增加以下字段，在测试替身 `iconRegistry` 增加 `vercel` 条目，并将 `fileNameKeys` 改为含 `'vercel.json': 'vercel'` 的对象。
+- [x] **Step 1：增加能区分深浅主题的测试素材。** 在既有 `SVG` 常量增加以下字段，在测试替身 `iconRegistry` 增加 `vercel` 条目，并将 `fileNameKeys` 改为含 `'vercel.json': 'vercel'` 的对象。
 
 ```javascript
 // SVG 中新增
@@ -137,7 +137,7 @@ vercelLight: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-light"><
 vercel: { dark: SVG.vercelDark, light: SVG.vercelLight },
 ```
 
-- [ ] **Step 2：在测试文件加入加载辅助函数和失败用例。** `onLayoutReady()` 不触发，仅隔离本任务的加载及事件行为。既有文件树用例继续负责行观察逻辑，最终实机步骤负责真实宿主生命周期。
+- [x] **Step 2：在测试文件加入加载辅助函数和失败用例。** `onLayoutReady()` 不触发，仅隔离本任务的加载及事件行为。既有文件树用例继续负责行观察逻辑，最终实机步骤负责真实宿主生命周期。
 
 ```javascript
 async function createLoadedThemePlugin(initialDark) {
@@ -206,13 +206,13 @@ test('theme: registered callbacks are removed on unload', async () => {
 });
 ```
 
-- [ ] **Step 3：运行失败测试。** 预期深色启动仍返回浅色素材，或缺少 `css-change` 回调。
+- [x] **Step 3：运行失败测试。** 预期深色启动仍返回浅色素材，或缺少 `css-change` 回调。
 
 ```bash
 node --test --test-name-pattern='theme:' tests/file-tree.test.mjs
 ```
 
-- [ ] **Step 4：在 `await this.loadSettings()` 后初始化主题并注册事件。** 删除 `themeObserver`、`themeDoc` 两个闲置字段及其注册、断开和置空语句，不删除文件树观察器或其他清理逻辑。
+- [x] **Step 4：在 `await this.loadSettings()` 后初始化主题并注册事件。** 删除 `themeObserver`、`themeDoc` 两个闲置字段及其注册、断开和置空语句，不删除文件树观察器或其他清理逻辑。
 
 ```typescript
 this.isDark = this.app.isDarkMode();
@@ -224,7 +224,7 @@ this.registerEvent(this.app.workspace.on('css-change', () => {
 }));
 ```
 
-- [ ] **Step 5：运行主题用例、全量测试与检查。**
+- [x] **Step 5：运行主题用例、全量测试与检查。**
 
 ```bash
 node --test --test-name-pattern='theme:' tests/file-tree.test.mjs
@@ -233,7 +233,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 6：提交并推送主题修复。**
+- [x] **Step 6：提交并推送主题修复。**
 
 ```bash
 git add src/main.ts tests/file-tree.test.mjs
@@ -255,7 +255,7 @@ git push -u origin HEAD
 - Produces：函数签名不变，返回节点中的本地 `id`、`url(#id)`、`href="#id"`、`xlink:href="#id"` 成对改名。
 - Boundary：只处理随插件发布的矢量图属性，不引入任意用户矢量图清洗器，不改变颜色、路径和视口。
 
-- [ ] **Step 1：增加两个同名渐变的素材。** 将以下 `gradientA`、`gradientB` 加入 `SVG`，将 `gradient` 加入测试替身图标表，增加 `grad: 'gradient'` 扩展名映射。
+- [x] **Step 1：增加两个同名渐变的素材。** 将以下 `gradientA`、`gradientB` 加入 `SVG`，将 `gradient` 加入测试替身图标表，增加 `grad: 'gradient'` 扩展名映射。
 
 ```javascript
 // SVG 中新增
@@ -266,7 +266,7 @@ gradientB: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.o
 gradient: { dark: SVG.gradientA, light: SVG.gradientB },
 ```
 
-- [ ] **Step 2：增加以下失败用例。** 断言引用仍落在各自图标内部，不将序号具体值写死在测试中。
+- [x] **Step 2：增加以下失败用例。** 断言引用仍落在各自图标内部，不将序号具体值写死在测试中。
 
 ```javascript
 test('svg isolation: instances keep their own IDs and references', () => {
@@ -298,13 +298,13 @@ test('svg isolation: instances keep their own IDs and references', () => {
 });
 ```
 
-- [ ] **Step 3：运行失败测试。** 预期唯一标识数量小于标识总数量。
+- [x] **Step 3：运行失败测试。** 预期唯一标识数量小于标识总数量。
 
 ```bash
 node --test --test-name-pattern='svg isolation:' tests/file-tree.test.mjs
 ```
 
-- [ ] **Step 4：在矢量图辅助函数区域增加实例计数器，并替换 `parseSvgIcon()`。** 无内部标识的图标走快速返回路径。仅改写当前图标中存在的标识，保留属性命名空间。
+- [x] **Step 4：在矢量图辅助函数区域增加实例计数器，并替换 `parseSvgIcon()`。** 无内部标识的图标走快速返回路径。仅改写当前图标中存在的标识，保留属性命名空间。
 
 ```typescript
 let svgInstanceId = 0;
@@ -353,7 +353,7 @@ function parseSvgIcon(svg: string, doc: Document): SVGElement | null {
 }
 ```
 
-- [ ] **Step 5：运行隔离用例、原有行复用回归和全量检查。** 真实颜色对比属于任务 6 的必做验收，不能用标识数量断言替代。
+- [x] **Step 5：运行隔离用例、原有行复用回归和全量检查。** 真实颜色对比属于任务 6 的必做验收，不能用标识数量断言替代。
 
 ```bash
 node --test tests/file-tree.test.mjs
@@ -362,7 +362,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 6：提交并推送渐变隔离修复。**
+- [x] **Step 6：提交并推送渐变隔离修复。**
 
 ```bash
 git add src/main.ts tests/file-tree.test.mjs
@@ -383,7 +383,7 @@ git push
 - Consumes：既有 `iconRegistry`、`fileNameKeys`、`fileExtensionKeys`、`folderNameKeys`、`folderNameOpenKeys`。
 - Produces：文件内辅助函数 `ownValue<T>(table: Record<string, T>, key: string): T | undefined`，不导出或建立通用模块。
 
-- [ ] **Step 1：将测试替身 `fileNameKeys` 保留 `vercel.json` 条目并加入显式 `constructor: 'typescript'`。增加以下用例。** 文件夹表保持空对象，用于复现继承属性错误。
+- [x] **Step 1：将测试替身 `fileNameKeys` 保留 `vercel.json` 条目并加入显式 `constructor: 'typescript'`。增加以下用例。** 文件夹表保持空对象，用于复现继承属性错误。
 
 ```javascript
 test('lookup: inherited names use folder defaults', () => {
@@ -410,13 +410,13 @@ test('lookup: own entries win and inherited icon keys are rejected', () => {
 });
 ```
 
-- [ ] **Step 2：运行失败测试。** 预期目录查询返回函数或对象，或图标表返回继承属性。
+- [x] **Step 2：运行失败测试。** 预期目录查询返回函数或对象，或图标表返回继承属性。
 
 ```bash
 node --test --test-name-pattern='lookup:' tests/file-tree.test.mjs
 ```
 
-- [ ] **Step 3：增加以下辅助函数。** 使用与 `ES2018` 类型库兼容的自身属性检查，不修改编译目标。
+- [x] **Step 3：增加以下辅助函数。** 使用与 `ES2018` 类型库兼容的自身属性检查，不修改编译目标。
 
 ```typescript
 function ownValue<T>(table: Record<string, T>, key: string): T | undefined {
@@ -424,7 +424,7 @@ function ownValue<T>(table: Record<string, T>, key: string): T | undefined {
 }
 ```
 
-- [ ] **Step 4：修改以下查询点。** 自定义规则数组匹配、优先级和默认图标键保持不变。
+- [x] **Step 4：修改以下查询点。** 自定义规则数组匹配、优先级和默认图标键保持不变。
 
 ```typescript
 // getIconSet() 的返回值
@@ -441,7 +441,7 @@ const extKey = ownValue(fileExtensionKeys, ext);
 return ownValue(table, name) ?? (collapsed ? folderIconKey : folderOpenIconKey);
 ```
 
-- [ ] **Step 5：运行名称匹配用例和全量检查。**
+- [x] **Step 5：运行名称匹配用例和全量检查。**
 
 ```bash
 node --test --test-name-pattern='lookup:' tests/file-tree.test.mjs
@@ -450,7 +450,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 6：提交并推送映射查询修复。**
+- [x] **Step 6：提交并推送映射查询修复。**
 
 ```bash
 git add src/main.ts tests/file-tree.test.mjs
@@ -473,7 +473,7 @@ git push
 - Produces：原生 `button` 选项，保留 `.mfi-picker-item`、`.mfi-picker-svg`、`.mfi-picker-name` 类名及搜索逻辑。
 - Boundary：不实现完整弹窗框架，不增加运行时测试导出，不模拟浏览器的原生键盘行为。
 
-- [ ] **Step 1：仅在测试编译结果中导出选择器类。** 测试文件增加 `readFileSync`、`dirname` 导入，在已有 `builder` 配置中增加下列加载规则，将模块解构改为同时读取 `default` 与 `IconPickerModal`。
+- [x] **Step 1：仅在测试编译结果中导出选择器类。** 测试文件增加 `readFileSync`、`dirname` 导入，在已有 `builder` 配置中增加下列加载规则，将模块解构改为同时读取 `default` 与 `IconPickerModal`。
 
 ```javascript
 import { readFileSync } from 'node:fs';
@@ -489,7 +489,7 @@ builder.onLoad({ filter: /[\\/]src[\\/]main\.ts$/ }, args => ({
 const { default: MaterialFileIconsPlugin, IconPickerModal } = await import(moduleUrl);
 ```
 
-- [ ] **Step 2：替换测试替身的空 `Modal` 类。** 其余宿主替身保持原状。
+- [x] **Step 2：替换测试替身的空 `Modal` 类。** 其余宿主替身保持原状。
 
 ```javascript
 export class Modal {
@@ -502,7 +502,7 @@ export class Modal {
 }
 ```
 
-- [ ] **Step 3：在既有 `Object.defineProperties(window.HTMLElement.prototype, ...)` 中追加以下属性。** 保留已有 `createSpan`、`empty`、`instanceOf` 实现。
+- [x] **Step 3：在既有 `Object.defineProperties(window.HTMLElement.prototype, ...)` 中追加以下属性。** 保留已有 `createSpan`、`empty`、`instanceOf` 实现。
 
 ```javascript
 createEl: {
@@ -526,7 +526,7 @@ setText: {
 },
 ```
 
-- [ ] **Step 4：为已有 `createSpan` 辅助函数增加 `options.text` 支持，写入选择器失败用例。** 原生键盘选择另由实机验收，不用合成 `keydown` 的结果冒充浏览器行为。
+- [x] **Step 4：为已有 `createSpan` 辅助函数增加 `options.text` 支持，写入选择器失败用例。** 原生键盘选择另由实机验收，不用合成 `keydown` 的结果冒充浏览器行为。
 
 ```javascript
 // createSpan 中在 appendChild 前新增
@@ -571,13 +571,13 @@ test('picker: closing without selection does not submit a rule', () => {
 });
 ```
 
-- [ ] **Step 5：运行失败测试。** 预期条目仍是 `DIV`，而不是可聚焦按钮。
+- [x] **Step 5：运行失败测试。** 预期条目仍是 `DIV`，而不是可聚焦按钮。
 
 ```bash
 node --test --test-name-pattern='picker:' tests/file-tree.test.mjs
 ```
 
-- [ ] **Step 6：替换选项创建代码和两个内部容器。** 保留既有选中样式与点击回调，不增加 Enter、Space 的自定义键盘处理器。
+- [x] **Step 6：替换选项创建代码和两个内部容器。** 保留既有选中样式与点击回调，不增加 Enter、Space 的自定义键盘处理器。
 
 ```typescript
 const item = grid.createEl('button', {
@@ -595,7 +595,7 @@ renderIconInto(svgWrap, svg, 24);
 item.createSpan({ text: key, cls: 'mfi-picker-name' });
 ```
 
-- [ ] **Step 7：把条目、悬停和选中规则的选择器改成 `button.mfi-picker-item` 对应形式，并给条目规则增加下列属性。** 保留原有布局、间距与边框规则，不修改其他组件样式。
+- [x] **Step 7：把条目、悬停和选中规则的选择器改成 `button.mfi-picker-item` 对应形式，并给条目规则增加下列属性。** 保留原有布局、间距与边框规则，不修改其他组件样式。
 
 ```css
 /* 追加到 button.mfi-picker-item 规则内 */
@@ -613,7 +613,7 @@ button.mfi-picker-item:focus-visible {
 }
 ```
 
-- [ ] **Step 8：运行选择器及全量检查。** 窄窗口尺寸、焦点可见性和原生按键属于任务 6 的必做检查。
+- [x] **Step 8：运行选择器及全量检查。** 窄窗口尺寸、焦点可见性和原生按键属于任务 6 的必做检查。
 
 ```bash
 node --test --test-name-pattern='picker:' tests/file-tree.test.mjs
@@ -622,7 +622,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 9：提交并推送键盘选图修复。**
+- [x] **Step 9：提交并推送键盘选图修复。**
 
 ```bash
 git add src/main.ts styles.css tests/file-tree.test.mjs
@@ -644,7 +644,7 @@ git push
 - Produces：两种语言文档中的标准相对链接。
 - Boundary：本项明确使用标准 Markdown 链接，覆盖格式技能关于仓库内文档使用双括号链接的默认规则。
 
-- [ ] **Step 1：运行下列检查，确认失败发生在旧的双括号链接上。**
+- [x] **Step 1：运行下列检查，确认失败发生在旧的双括号链接上。**
 
 ```bash
 node --input-type=module <<'JS'
@@ -659,7 +659,7 @@ for (const file of ['README.md', 'README-zh.md']) {
 JS
 ```
 
-- [ ] **Step 2：将两处链接分别替换为以下内容。** 不修改其他文案或图标数量说明。
+- [x] **Step 2：将两处链接分别替换为以下内容。** 不修改其他文案或图标数量说明。
 
 ```markdown
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development, tests, upstream updates and releases.
@@ -669,9 +669,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development, tests, upstream updates 
 开发、测试、上游升级与发布流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 ```
 
-- [ ] **Step 3：重新运行 Step 1 检查，确认通过。**
+- [x] **Step 3：重新运行 Step 1 检查，确认通过。**
 
-- [ ] **Step 4：提交并推送链接修复。**
+- [x] **Step 4：提交并推送链接修复。**
 
 ```bash
 git diff --check
@@ -700,7 +700,7 @@ git push
 - Consumes：任务 1–5 的最终提交和构建产物。
 - Produces：全量检查结果、宿主版本、复现前后证据、性能对比和未验证清单。
 
-- [ ] **Step 1：执行锁定安装、全量回归和构建，确认原有发布测试仍通过。**
+- [x] **Step 1：执行锁定安装、全量回归和构建，确认原有发布测试仍通过。**
 
 ```bash
 npm ci
@@ -710,7 +710,7 @@ npm run build
 git diff --check
 ```
 
-- [ ] **Step 2：确认生成结果可复现并记录体积。** 两次构建的文件摘要必须相同，矢量图实例计数器不参与构建输出的随机化。
+- [x] **Step 2：确认生成结果可复现并记录体积。** 两次构建的文件摘要必须相同，矢量图实例计数器不参与构建输出的随机化。
 
 ```bash
 sha256sum main.js src/icon-data.ts
@@ -720,17 +720,38 @@ sha256sum main.js src/icon-data.ts
 wc -c main.js
 ```
 
-- [ ] **Step 3：准备独立的真实宿主环境。** 从该环境实际安装的 Obsidian 启动独立测试笔记库。若通过调试端口驱动，必须使用独立用户配置和已确认空闲的端口。不得连接另一项任务或日常笔记库执行写操作。
-- [ ] **Step 4：主题验收。** 创建内容为 `{}` 的 `vercel.json`，必要时启用显示所有文件类型。分别执行深色启动、浅色切换、切回深色，核对图标填充色。切换后打开规则和选择器，核对预览颜色。
-- [ ] **Step 5：渐变验收。** 创建 `a.kt` 与 `bitbucket-pipelines.yml` 并同时显示。保存修复前后截图，确认 Bitbucket 保持蓝色，不受 Kotlin 是否在视图中影响。打开完整选择器并搜索 `kotlin`、`bitbucket`、`aurelia`，核对筛选前后的颜色一致。
-- [ ] **Step 6：名称验收。** 创建 `constructor`、`__proto__` 两个目录，在展开与折叠后都保持默认目录图标。确认普通目录和文件类型仍命中原有图标。
-- [ ] **Step 7：键盘与规则验收。** 只使用键盘打开新增规则、填写扩展名、进入选择器、搜索 `typescript`、Tab 聚焦结果、Enter 确认。再次使用 Space 选择，另一次使用 Escape 取消。补测鼠标选择、编辑、删除、重复扩展名提示以及重新打开后的保存结果。
-- [ ] **Step 8：窗口与资源验收。** 在两个文件树和独立窗口中检查图标。完成至少三轮禁用、启用，禁用后插件图标、标记、文件树观察器和启动计时器必须清理，重新启用后没有重复或缺失图标。
-- [ ] **Step 9：滚动与性能验收。** 在约 500 个文件的临时笔记库中往返滚动、展开、折叠和重命名，核对可见行图标。分别重复测量五次选择器打开和相同搜索操作，与审查基线或同环境旧构建比较中位数。存在持续变慢时定位新增逻辑，不直接引入缓存层或虚拟列表。
-- [ ] **Step 10：兼容性记录。** 检查标准桌面窗口及窄窗口中的按钮布局、焦点边框和长图标名称。具备移动设备或最低版本环境时补实测，不具备时明确保留未验证项，不以桌面缩窄代替移动端验证。
-- [ ] **Step 11：运行 `/gstack-review` 技能。** 本环境对应可用技能 `review`。逐项复核发现的触发条件、实际影响、最小修复和长期代价，只修复本计划范围内的有效发现，并重跑相关测试及全量检查。
+- [x] **Step 3：准备独立的真实宿主环境。** 从该环境实际安装的 Obsidian 启动独立测试笔记库。若通过调试端口驱动，必须使用独立用户配置和已确认空闲的端口。不得连接另一项任务或日常笔记库执行写操作。
+- [x] **Step 4：主题验收。** 创建内容为 `{}` 的 `vercel.json`，必要时启用显示所有文件类型。分别执行深色启动、浅色切换、切回深色，核对图标填充色。切换后打开规则和选择器，核对预览颜色。
+- [x] **Step 5：渐变验收。** 创建 `a.kt` 与 `bitbucket-pipelines.yml` 并同时显示。保存修复前后截图，确认 Bitbucket 保持蓝色，不受 Kotlin 是否在视图中影响。打开完整选择器并搜索 `kotlin`、`bitbucket`、`aurelia`，核对筛选前后的颜色一致。
+- [x] **Step 6：名称验收。** 创建 `constructor`、`__proto__` 两个目录，在展开与折叠后都保持默认目录图标。确认普通目录和文件类型仍命中原有图标。
+- [x] **Step 7：键盘与规则验收。** 只使用键盘打开新增规则、填写扩展名、进入选择器、搜索 `typescript`、Tab 聚焦结果、Enter 确认。再次使用 Space 选择，另一次使用 Escape 取消。补测鼠标选择、编辑、删除、重复扩展名提示以及重新打开后的保存结果。
+- [x] **Step 8：窗口与资源验收。** 在两个文件树和独立窗口中检查图标。完成至少三轮禁用、启用，禁用后插件图标、标记、文件树观察器和启动计时器必须清理，重新启用后没有重复或缺失图标。
+- [x] **Step 9：滚动与性能验收。** 在约 500 个文件的临时笔记库中往返滚动、展开、折叠和重命名，核对可见行图标。分别重复测量五次选择器打开和相同搜索操作，与审查基线或同环境旧构建比较中位数。存在持续变慢时定位新增逻辑，不直接引入缓存层或虚拟列表。
+- [x] **Step 10：兼容性记录。** 检查标准桌面窗口及窄窗口中的按钮布局、焦点边框和长图标名称。具备移动设备或最低版本环境时补实测，不具备时明确保留未验证项，不以桌面缩窄代替移动端验证。
+- [x] **Step 11：运行 `/gstack-review` 技能。** 本环境对应可用技能 `review`。逐项复核发现的触发条件、实际影响、最小修复和长期代价，只修复本计划范围内的有效发现，并重跑相关测试及全量检查。
 - [ ] **Step 12：在实施授权包含交付时运行 `/gstack-ship` 技能。** 本环境对应可用技能 `ship`。完成必要提交、推送和 PR（合并请求）创建，遵守仓库提交及问题关联规范。遇到需要新权限或扩大范围的动作时停止并请求用户决定，不自动合并或正式发布。
-- [ ] **Step 13：交付结果。** 汇报改动、审查结论、测试结果、实机范围、性能对比、PR 地址及未解决事项。计划完成不以测试数量、文件长度或“零风险”作为标准。
+- [x] **Step 13：交付结果。** 汇报改动、审查结论、测试结果、实机范围、性能对比、PR 地址及未解决事项。计划完成不以测试数量、文件长度或“零风险”作为标准。
+
+---
+
+## 实施验证记录
+
+> 2026-09-07，在当前主仓库的 `codex/fix-plugin-quality` 分支实施。
+> 自动化检查与真实宿主检查分别记录；不把未覆盖环境记为通过。
+
+- **实现提交**：`f472c48` 主题、`ede326e` 渐变隔离、`7bcc2bd` 自身属性查询、`421e7ec` 键盘选图、`99af71f` 文档链接；均已提交并推送任务分支。
+- **范围核对**：未修改依赖、锁文件、版本、上游绑定或发布链路；未提交生成文件。五项任务均通过独立规格与代码质量审查；最终整体审查及 Task 6 证据验收通过，无需要修复的发现，结论为可以合并，但没有执行合并。
+- **自动化**：Node.js 22.23.2 / npm 10.9.9 下锁定安装、47 项测试、代码检查、类型检查和构建通过；原有 40 项测试保留。控制器交付前全量复测再次通过。
+- **可复现构建**：两次 `main.js` SHA-256（摘要）均为 `85b8c9e98a7e15c84915ba9b72ced81b49921be6c1008b52c56a458549534bc3`；产物 `2,100,169` 字节，比基线增加 `769` 字节。
+- **宿主功能**：独立 Obsidian 1.13.7 测试库确认深色启动、明暗切换及预览；Kotlin 与 Bitbucket 同屏颜色正确；完整选择器 1,126 项中的 1,136 个内部标识无重复，搜索前后颜色一致。
+- **规则交互**：原生键盘 Tab、Enter、Space、Escape 和原生鼠标输入验证选择、取消、新增、编辑、删除、重复提示与持久化。测试初始焦点由程序设置，随后补查了原生 Tab 到达添加规则入口，不宣称系统设置入口全流程键盘自动化。
+- **生命周期与文件树**：两个文件树、两个文档完成三轮禁用及启用；禁用后图标、标记、观察器及启动计时器归零，启用后无缺图或重复。514 个文件的滚动、展开、折叠及重命名样本全部正确；瞬时行数为 35、48、107、243、49、35，不能声称始终维持基线的 35–49 行；脱离文档的目录观察器为 0。
+- **性能**：同方法五次测量，打开选择器中位数从旧版 `175.9 ms` 变为新版首次 `263.1 ms`，空闲前台复测为 `208.8 ms`；搜索由 `10.7 ms` 变为复测 `11.9 ms`。新增同步路径包含必要的内部引用隔离及原生按钮构建，未单独测量两者占比；没有为这项规则编辑时才触发的操作新增缓存或工具链。
+- **布局**：标准桌面窗口及 `480×700` 桌面模拟视口中，长名称省略、2 像素键盘焦点边框和按钮布局通过；窄视口内按钮无重叠或越界。视口模拟不等于物理窗口或移动端实测。
+- **宿主限制**：`constructor`、`__proto__` 顶层目录行的开合图标已验证；特殊目录测试数据还触发宿主自身索引及视图创建异常。仅在独立测试库可恢复地改名和移动测试文件，重启后文件树恢复；未给插件增加宿主兼容层，也不宣称修复该宿主限制。
+- **既有安装提示**：`npm audit` 报告 `fast-uri` 开发依赖的一项 high（高严重性）告警，锁文件未变，不是本分支新增的运行时依赖；本计划未越界升级依赖。
+- **未验证及未执行**：移动端、Obsidian 1.13.0、第三方主题未实测；尚未创建 PR、合并主分支、创建标签或正式发布。步骤 12 留待用户选择远端交付后执行。
+- **本机证据**：逐项报告与审查账本保留于本计划对应的 `.superpowers/sdd/2026-09-07-plugin-quality-fixes/` 忽略目录；原始宿主日志和截图位于 `/tmp/material-icons-review.yARtFY/`，未提交到仓库。
 
 ---
 
