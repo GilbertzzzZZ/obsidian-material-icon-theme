@@ -6,11 +6,6 @@ on:
     tags:
       - '*.*.*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag (must match manifest version, e.g. 1.0.0)'
-        required: true
-        default: '1.0.0'
 
 permissions:
   contents: write
@@ -24,11 +19,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
+
+      - name: Verify release source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/verify-release.mjs > "$RUNNER_TEMP/release-notes.md"
 
       - run: npm ci
       - run: npm test
@@ -43,23 +45,17 @@ jobs:
             manifest.json
             styles.css
 
-      - name: Reset release before upload
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: |
-          # Recreate the release so old attachments are not kept.
-          # Tag is preserved; GitHub re-adds source archives on the new release.
-          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
-
       # Obsidian downloads these three files individually; a zip would just be
       # an unused extra asset on the release.
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          body_path: ${{ runner.temp }}/release-notes.md
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             main.js
             manifest.json
