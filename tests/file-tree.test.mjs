@@ -10,6 +10,8 @@ const SVG = {
   folderOpen: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="folder-open"></svg>',
   vercelDark: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-dark"></svg>',
   vercelLight: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-light"></svg>',
+  gradientA: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><linearGradient id="a"><stop stop-color="red"/></linearGradient><linearGradient id="b" xlink:href="#a"/></defs><path fill="url(#b)"/><use href="#a"/></svg>',
+  gradientB: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><linearGradient id="a"><stop stop-color="blue"/></linearGradient><linearGradient id="b" xlink:href="#a"/></defs><path fill="url(#b)"/><use href="#a"/></svg>',
 };
 
 const bundle = await build({
@@ -46,8 +48,9 @@ const bundle = await build({
               folder: { dark: SVG.folder, light: SVG.folder },
               'folder-open': { dark: SVG.folderOpen, light: SVG.folderOpen },
               vercel: { dark: SVG.vercelDark, light: SVG.vercelLight },
+              gradient: { dark: SVG.gradientA, light: SVG.gradientB },
             })};
-            export const fileExtensionKeys = { ts: 'typescript' };
+            export const fileExtensionKeys = { ts: 'typescript', grad: 'gradient' };
             export const fileNameKeys = { 'vercel.json': 'vercel' };
             export const folderNameKeys = {};
             export const folderNameOpenKeys = {};
@@ -215,6 +218,34 @@ test('theme: registered callbacks are removed on unload', async () => {
   assert.equal(h.events.has('css-change'), true);
   h.dispose();
   assert.equal(h.events.has('css-change'), false);
+});
+
+test('svg isolation: instances keep their own IDs and references', () => {
+  const plugin = createPlugin();
+  const first = createFileRow('first.grad');
+  const second = createFileRow('second.grad');
+  document.body.append(first.item, second.item);
+  plugin.isDark = true;
+  plugin.injectFileIcon(first.title, 'first.grad');
+  plugin.isDark = false;
+  plugin.injectFileIcon(second.title, 'second.grad');
+  const svgs = [first, second].map(row => row.title.querySelector('svg'));
+  const ids = svgs.flatMap(svg => [...svg.querySelectorAll('[id]')].map(el => el.id));
+  assert.equal(new Set(ids).size, ids.length);
+  for (const svg of svgs) {
+    const [a, b] = svg.querySelectorAll('linearGradient');
+    assert.equal(b.getAttributeNS('http://www.w3.org/1999/xlink', 'href'), `#${a.id}`);
+    assert.equal(svg.querySelector('path').getAttribute('fill'), `url(#${b.id})`);
+    assert.equal(svg.querySelector('use').getAttribute('href'), `#${a.id}`);
+  }
+  assert.equal(svgs[0].querySelector('stop').getAttribute('stop-color'), 'red');
+  assert.equal(svgs[1].querySelector('stop').getAttribute('stop-color'), 'blue');
+
+  const host = first.title.querySelector('.mfi-icon');
+  plugin.injectFileIcon(first.title, 'first.grad', true);
+  assert.equal(first.title.querySelector('.mfi-icon'), host);
+  const finalIds = [...document.querySelectorAll('.mfi-icon [id]')].map(el => el.id);
+  assert.equal(new Set(finalIds).size, finalIds.length);
 });
 
 test.afterEach(() => {

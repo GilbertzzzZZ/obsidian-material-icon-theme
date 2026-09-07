@@ -39,6 +39,8 @@ const BOOT_RETRY_DELAYS = [0, 200, 600, 1500, 3000, 6000];
 
 // ── SVG helpers ───────────────────────────────────────────────────────────────
 
+let svgInstanceId = 0;
+
 /**
  * Icon SVGs ship with the plugin and are never user input, but they still get
  * parsed rather than assigned through innerHTML — raw HTML assignment is called
@@ -51,7 +53,41 @@ function parseSvgIcon(svg: string, doc: Document): SVGElement | null {
   const root = parsed.documentElement;
   if (root.nodeName.toLowerCase() !== 'svg') return null;
 
-  return doc.importNode(root, true) as unknown as SVGElement;
+  const node = doc.importNode(root, true) as unknown as SVGElement;
+  const identified: Element[] = Array.from(node.querySelectorAll('[id]'));
+  if (node.hasAttribute('id')) identified.unshift(node);
+  if (identified.length === 0) return node;
+
+  const prefix = `mfi-svg-${++svgInstanceId}-`;
+  const ids = new Map<string, string>();
+  for (const element of identified) {
+    const original = element.getAttribute('id');
+    if (!original) continue;
+    const renamed = prefix + original;
+    ids.set(original, renamed);
+    element.setAttribute('id', renamed);
+  }
+
+  for (const element of [node, ...Array.from(node.querySelectorAll('*'))]) {
+    for (const attribute of Array.from(element.attributes)) {
+      let value = attribute.value;
+      if (attribute.localName === 'href' && value.startsWith('#')) {
+        const renamed = ids.get(value.slice(1));
+        if (renamed) value = `#${renamed}`;
+      }
+      value = value.replace(
+        /url\(\s*(['"]?)#([^'")\s]+)\1\s*\)/g,
+        (match: string, _quote: string, id: string) => {
+          const renamed = ids.get(id);
+          return renamed ? `url(#${renamed})` : match;
+        },
+      );
+      if (value !== attribute.value) {
+        element.setAttributeNS(attribute.namespaceURI, attribute.name, value);
+      }
+    }
+  }
+  return node;
 }
 
 /** Replace an element's contents with a sized copy of the given icon. */
