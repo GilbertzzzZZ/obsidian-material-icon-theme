@@ -157,7 +157,7 @@ Icon artwork comes from [Material Icon Theme](https://github.com/material-extens
 
 Issues and pull requests are welcome.
 
-See [[CONTRIBUTING|CONTRIBUTING.md]] for development, tests, upstream updates and releases.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development, tests, upstream updates and releases.
 
 - 🐛 **Report a bug or request an icon**<br>
   [Open an issue](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/issues) with your Obsidian version, plugin version, and steps to reproduce.

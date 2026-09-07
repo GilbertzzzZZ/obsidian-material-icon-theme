@@ -157,7 +157,7 @@ npm run build-icons   # 仅重新生成 src/icon-data.ts
 
 欢迎提交 Issue 和 Pull Request。
 
-开发、测试、上游升级与发布流程见 [[CONTRIBUTING|CONTRIBUTING.md]]。
+开发、测试、上游升级与发布流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 - 🐛 **报告问题或申请图标**<br>
   [提交 Issue](https://github.com/GilbertzzzZZ/obsidian-material-icon-theme/issues)，并附上 Obsidian 版本、插件版本和复现步骤。
