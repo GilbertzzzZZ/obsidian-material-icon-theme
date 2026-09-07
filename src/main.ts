@@ -379,13 +379,20 @@ class IconPickerModal extends Modal {
         const set = iconRegistry[key];
         const svg = this.isDark ? set.dark : set.light;
 
-        const item = grid.createDiv({ cls: 'mfi-picker-item' });
+        const item = grid.createEl('button', {
+          cls: 'mfi-picker-item',
+          attr: {
+            type: 'button',
+            'aria-label': key,
+            'aria-pressed': String(key === this.currentKey),
+          },
+        });
         if (key === this.currentKey) item.addClass('is-active');
 
-        const svgWrap = item.createDiv({ cls: 'mfi-picker-svg' });
+        const svgWrap = item.createSpan({ cls: 'mfi-picker-svg' });
         renderIconInto(svgWrap, svg, 24);
 
-        item.createDiv({ text: key, cls: 'mfi-picker-name' });
+        item.createSpan({ text: key, cls: 'mfi-picker-name' });
 
         item.addEventListener('click', () => {
           this.currentKey = key;

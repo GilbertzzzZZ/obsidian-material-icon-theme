@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import test from 'node:test';
 import { build } from 'esbuild';
 import { Window } from 'happy-dom';
@@ -30,7 +32,14 @@ const bundle = await build({
         builder.onLoad({ filter: /^obsidian$/, namespace: 'test-stub' }, () => ({
           contents: `
             export class Plugin {}
-            export class Modal {}
+            export class Modal {
+              constructor(app) {
+                this.app = app;
+                this.contentEl = document.createElement('div');
+                this.titleEl = document.createElement('h2');
+              }
+              close() { this.onClose(); }
+            }
             export class Notice {}
             export class PluginSettingTab {}
             export class Setting {}
@@ -60,6 +69,12 @@ const bundle = await build({
           `,
           loader: 'js',
         }));
+
+        builder.onLoad({ filter: /[\\/]src[\\/]main\.ts$/ }, args => ({
+          contents: readFileSync(args.path, 'utf8') + '\nexport { IconPickerModal };',
+          loader: 'ts',
+          resolveDir: dirname(args.path),
+        }));
       },
     },
   ],
@@ -78,9 +93,29 @@ Object.defineProperties(window.HTMLElement.prototype, {
     value(options = {}) {
       const span = this.ownerDocument.createElement('span');
       if (options.cls) span.className = options.cls;
+      if (options.text) span.textContent = options.text;
       this.appendChild(span);
       return span;
     },
+  },
+  createEl: {
+    value(tag, options = {}) {
+      const el = this.ownerDocument.createElement(tag);
+      if (options.cls) el.className = options.cls;
+      if (options.text) el.textContent = options.text;
+      for (const [key, value] of Object.entries(options.attr ?? {})) el.setAttribute(key, value);
+      this.appendChild(el);
+      return el;
+    },
+  },
+  createDiv: {
+    value(options = {}) { return this.createEl('div', options); },
+  },
+  addClass: {
+    value(...classes) { this.classList.add(...classes); },
+  },
+  setText: {
+    value(text) { this.textContent = text; },
   },
   empty: {
     value() {
@@ -95,7 +130,7 @@ Object.defineProperties(window.HTMLElement.prototype, {
 });
 
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`;
-const { default: MaterialFileIconsPlugin } = await import(moduleUrl);
+const { default: MaterialFileIconsPlugin, IconPickerModal } = await import(moduleUrl);
 
 function createPlugin() {
   const plugin = Object.create(MaterialFileIconsPlugin.prototype);
@@ -269,6 +304,44 @@ test('svg isolation: instances keep their own IDs and references', () => {
   assert.equal(first.title.querySelector('.mfi-icon'), host);
   const finalIds = [...document.querySelectorAll('.mfi-icon [id]')].map(el => el.id);
   assert.equal(new Set(finalIds).size, finalIds.length);
+});
+
+test('picker: searchable options are focusable named buttons', t => {
+  const chosen = [];
+  const picker = new IconPickerModal({}, false, 'typescript', {
+    pickIcon: '选择图标',
+    searchPlaceholder: '搜索图标',
+  }, key => chosen.push(key));
+  t.after(() => picker.onClose());
+  document.body.appendChild(picker.contentEl);
+  picker.onOpen();
+  const search = picker.contentEl.querySelector('input');
+  search.value = ' TypeScript ';
+  search.dispatchEvent(new window.Event('input', { bubbles: true }));
+  const options = [...picker.contentEl.querySelectorAll('.mfi-picker-item')];
+  assert.equal(options.length, 1);
+  const option = options[0];
+  assert.equal(option.tagName, 'BUTTON');
+  assert.equal(option.type, 'button');
+  assert.equal(option.getAttribute('aria-label'), 'typescript');
+  assert.equal(option.getAttribute('aria-pressed'), 'true');
+  assert.equal(option.tabIndex, 0);
+  option.focus();
+  assert.equal(document.activeElement, option);
+  option.click();
+  assert.deepEqual(chosen, ['typescript']);
+  assert.equal(picker.contentEl.childElementCount, 0);
+});
+
+test('picker: closing without selection does not submit a rule', () => {
+  const chosen = [];
+  const picker = new IconPickerModal({}, false, '', {
+    pickIcon: '选择图标',
+    searchPlaceholder: '搜索图标',
+  }, key => chosen.push(key));
+  picker.onOpen();
+  picker.onClose();
+  assert.deepEqual(chosen, []);
 });
 
 test.afterEach(() => {
