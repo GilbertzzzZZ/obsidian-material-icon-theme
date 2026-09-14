@@ -10,6 +10,8 @@ const SVG = {
   typescript: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="typescript"></svg>',
   folder: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="folder"></svg>',
   folderOpen: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="folder-open"></svg>',
+  assetsFolder: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="assets-folder"></svg>',
+  assetsFolderOpen: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="assets-folder-open"></svg>',
   vercelDark: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-dark"></svg>',
   vercelLight: '<svg xmlns="http://www.w3.org/2000/svg" data-icon="vercel-light"></svg>',
   gradientA: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><linearGradient id="a"><stop stop-color="red"/></linearGradient><linearGradient id="b" xlink:href="#a"/></defs><path fill="url(#b)"/><use href="#a"/></svg>',
@@ -56,13 +58,15 @@ const bundle = await build({
               typescript: { dark: SVG.typescript, light: SVG.typescript },
               folder: { dark: SVG.folder, light: SVG.folder },
               'folder-open': { dark: SVG.folderOpen, light: SVG.folderOpen },
+              'assets-folder': { dark: SVG.assetsFolder, light: SVG.assetsFolder },
+              'assets-folder-open': { dark: SVG.assetsFolderOpen, light: SVG.assetsFolderOpen },
               vercel: { dark: SVG.vercelDark, light: SVG.vercelLight },
               gradient: { dark: SVG.gradientA, light: SVG.gradientB },
             })};
             export const fileExtensionKeys = { ts: 'typescript', grad: 'gradient' };
             export const fileNameKeys = { 'vercel.json': 'vercel', constructor: 'typescript' };
-            export const folderNameKeys = {};
-            export const folderNameOpenKeys = {};
+            export const folderNameKeys = { assets: 'assets-folder' };
+            export const folderNameOpenKeys = { assets: 'assets-folder-open' };
             export const defaultFileIconKey = 'file';
             export const folderIconKey = 'folder';
             export const folderOpenIconKey = 'folder-open';
@@ -474,6 +478,74 @@ test('removing a folder releases its observer without a whole-tree refresh', asy
   assert.equal(plugin.folderObservers.size, 0);
   assert.equal(scheduledRefreshes, 0);
   observer.disconnect();
+});
+
+for (const [initialCollapsed, before, after] of [
+  [false, 'folder-open', 'folder'],
+  [true, 'folder', 'folder-open'],
+]) {
+  test(`reattached folder reconciles ${before} to ${after}`, async t => {
+    const plugin = createPlugin();
+    const container = document.createElement('div');
+    const { item, title } = createFolderRow('plain');
+    item.classList.toggle('is-collapsed', initialCollapsed);
+    document.body.appendChild(container);
+    const observer = plugin.observeContainer(container);
+    t.after(() => {
+      observer.disconnect();
+      plugin.folderObservers.forEach(obs => obs.disconnect());
+    });
+    container.appendChild(item);
+    await flushMutations();
+    const host = title.querySelector('.mfi-icon');
+    assert.equal(title.querySelector('svg').dataset.icon, before);
+    item.remove();
+    await flushMutations();
+    assert.equal(plugin.folderObservers.has(item), false);
+    item.classList.toggle('is-collapsed', !initialCollapsed);
+    await flushMutations();
+    container.appendChild(item);
+    await flushMutations();
+    assert.equal(title.querySelector('svg').dataset.icon, after);
+    assert.equal(title.querySelector('.mfi-icon'), host);
+    item.classList.toggle('is-collapsed', initialCollapsed);
+    await flushMutations();
+    assert.equal(title.querySelector('svg').dataset.icon, before);
+  });
+}
+
+test('reattached asset folders update only when their icon key changes', async t => {
+  const plugin = createPlugin();
+  const container = document.createElement('div');
+  const { item, title } = createFolderRow('assets');
+  document.body.appendChild(container);
+  const observer = plugin.observeContainer(container);
+  t.after(() => {
+    observer.disconnect();
+    plugin.folderObservers.forEach(obs => obs.disconnect());
+  });
+
+  container.appendChild(item);
+  await flushMutations();
+  const host = title.querySelector('.mfi-icon');
+  const svg = title.querySelector('svg');
+  assert.equal(svg.dataset.icon, 'assets-folder');
+  plugin.processItem(item);
+  assert.equal(title.querySelector('svg'), svg);
+
+  item.remove();
+  await flushMutations();
+  container.appendChild(item);
+  await flushMutations();
+  assert.equal(title.querySelector('.mfi-icon'), host);
+  assert.equal(title.querySelector('svg'), svg);
+
+  item.classList.remove('is-collapsed');
+  await flushMutations();
+  assert.equal(title.querySelector('svg').dataset.icon, 'assets-folder-open');
+  const openSvg = title.querySelector('svg');
+  plugin.processItem(item);
+  assert.equal(title.querySelector('svg'), openSvg);
 });
 
 test('a folder row recycled as a file releases its folder observer', async () => {

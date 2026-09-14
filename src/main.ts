@@ -873,7 +873,7 @@ export default class MaterialFileIconsPlugin extends Plugin {
     const titleEl = itemEl.querySelector<HTMLElement>(':scope > .tree-item-self');
     if (!titleEl) return false;
 
-    if (!titleEl.hasAttribute(APPLIED_ATTR)) {
+    if (isFolder || !titleEl.hasAttribute(APPLIED_ATTR)) {
       // One unhappy row must not abort the whole sweep — the remaining siblings
       // would silently keep their theme icons until something else triggers a refresh.
       try {
@@ -1043,18 +1043,22 @@ export default class MaterialFileIconsPlugin extends Plugin {
   private injectFolderIcon(titleEl: HTMLElement, collapsed: boolean, force = false) {
     if (!this.settings.applyToFolders) return;
     if (force) titleEl.removeAttribute(APPLIED_ATTR);
-    else if (titleEl.hasAttribute(APPLIED_ATTR)) return;
+    else if (titleEl.hasAttribute(APPLIED_ATTR)) {
+      this.updateFolderIcon(titleEl, collapsed);
+      return;
+    }
 
     const contentEl = titleEl.querySelector('.nav-folder-title-content');
     if (!contentEl) return;
 
     const key = this.getFolderIconKey(titleEl.dataset.path ?? '', collapsed);
-    this.placeIcon(
+    const icon = this.placeIcon(
       titleEl,
       contentEl,
       this.getSvg(this.getIconSet(key)),
       `${ICON_CLASS} ${FOLDER_ICON_CLASS}`
     );
+    icon.dataset.mfiIconKey = key;
     titleEl.setAttribute(APPLIED_ATTR, '1');
   }
 
@@ -1080,13 +1084,16 @@ export default class MaterialFileIconsPlugin extends Plugin {
     }
 
     renderIconInto(icon, svg, 16);
+    return icon;
   }
 
   private updateFolderIcon(titleEl: HTMLElement, collapsed: boolean) {
     const span = titleEl.querySelector<HTMLElement>(`.${FOLDER_ICON_CLASS}`);
     if (!span) return;
     const key = this.getFolderIconKey(titleEl.dataset.path ?? '', collapsed);
+    if (span.dataset.mfiIconKey === key) return;
     renderIconInto(span, this.getSvg(this.getIconSet(key)), 16);
+    span.dataset.mfiIconKey = key;
   }
 
 
